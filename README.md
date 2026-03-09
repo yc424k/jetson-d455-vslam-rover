@@ -142,12 +142,38 @@ rs-enumerate-devices
 
 확인 포인트:
 
-- RGB 스트림 정상
-- Depth 스트림 정상
-- IMU (gyro/accel) 출력 정상
-- 프레임 드랍/끊김 여부
+- D455 모델/시리얼/USB 타입(3.x) 정상 인식
+- Firmware/Recommended Firmware 버전 확인
+- Color/Depth/IMU 지원 프로파일이 출력되는지 확인
 
-### ROS 토픽 기반 확인(SSH 환경 권장)
+> 실제 ROS 스트림 출력, 주기(`hz`), 프레임 드랍 확인은 **6번(드라이버 준비 후)** 단계에서 수행합니다.
+
+---
+
+## 6) ROS 2 RealSense 드라이버 준비
+
+```bash
+cd ~/ros2_ws/src
+git clone https://github.com/IntelRealSense/realsense-ros.git -b ros2-master
+```
+
+의존성 설치 및 빌드:
+
+```bash
+cd ~/ros2_ws
+rosdep update
+rosdep install --from-paths src --ignore-src -r -y
+colcon build --symlink-install
+source install/setup.bash
+```
+
+기본 실행 예시:
+
+```bash
+ros2 launch realsense2_camera rs_launch.py enable_gyro:=true enable_accel:=true
+```
+
+### ROS 토픽 기반 확인(드라이버 준비 후 실행)
 
 1) RealSense 노드 실행:
 
@@ -182,39 +208,6 @@ ros2 topic echo /camera/accel/sample --once
 - `ros2 topic list`에 color/depth/gyro/accel 관련 토픽이 보인다.
 - `ros2 topic hz`에서 값이 0으로 고정되지 않고 연속적으로 갱신된다.
 - `--once`로 실제 메시지(헤더/타임스탬프 포함)가 출력된다.
-
----
-
-## 6) ROS 2 RealSense 드라이버 준비
-
-```bash
-cd ~/ros2_ws/src
-git clone https://github.com/IntelRealSense/realsense-ros.git -b ros2-master
-```
-
-의존성 설치 및 빌드:
-
-```bash
-cd ~/ros2_ws
-rosdep update
-rosdep install --from-paths src --ignore-src -r -y
-colcon build --symlink-install
-source install/setup.bash
-```
-
-기본 실행 예시:
-
-```bash
-ros2 launch realsense2_camera rs_launch.py enable_gyro:=true enable_accel:=true
-```
-
-토픽 확인:
-
-```bash
-ros2 topic list | grep camera
-ros2 topic hz /camera/gyro/sample
-ros2 topic hz /camera/accel/sample
-```
 
 ---
 
