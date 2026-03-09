@@ -131,12 +131,14 @@ source ~/.bashrc
 lsusb | grep -i realsense
 ```
 
-### udev 규칙 / 권한 (필요 시)
+### (SSH/headless 권장) CLI 기반 장치 확인
 
 ```bash
 sudo apt install -y librealsense2-utils
-realsense-viewer
+rs-enumerate-devices
 ```
+
+> `realsense-viewer`는 GUI가 필요하므로 SSH/headless 환경에서는 보통 실행하지 않습니다.
 
 확인 포인트:
 
@@ -144,6 +146,42 @@ realsense-viewer
 - Depth 스트림 정상
 - IMU (gyro/accel) 출력 정상
 - 프레임 드랍/끊김 여부
+
+### ROS 토픽 기반 확인(SSH 환경 권장)
+
+1) RealSense 노드 실행:
+
+```bash
+ros2 launch realsense2_camera rs_launch.py enable_gyro:=true enable_accel:=true
+```
+
+2) 다른 터미널에서 토픽 확인:
+
+```bash
+ros2 topic list | grep -E "/camera/(color|depth|gyro|accel|imu)"
+```
+
+3) 주요 토픽 주기 확인:
+
+```bash
+ros2 topic hz /camera/color/image_raw
+ros2 topic hz /camera/depth/image_rect_raw
+ros2 topic hz /camera/gyro/sample
+ros2 topic hz /camera/accel/sample
+```
+
+4) 실제 메시지 1개 확인:
+
+```bash
+ros2 topic echo /camera/gyro/sample --once
+ros2 topic echo /camera/accel/sample --once
+```
+
+판단 기준(초기 점검):
+
+- `ros2 topic list`에 color/depth/gyro/accel 관련 토픽이 보인다.
+- `ros2 topic hz`에서 값이 0으로 고정되지 않고 연속적으로 갱신된다.
+- `--once`로 실제 메시지(헤더/타임스탬프 포함)가 출력된다.
 
 ---
 
@@ -315,6 +353,32 @@ sudo dpkg -i /tmp/ros2-apt-source.deb
 sudo apt update
 
 sudo apt install -y python3-colcon-common-extensions python3-vcstool
+```
+
+### `Unable to locate package librealsense2-utils` 에러
+
+`librealsense2-utils`는 기본 Ubuntu 저장소가 아니라 RealSense apt 저장소가 필요할 수 있습니다.
+아래 순서로 저장소를 등록한 뒤 다시 설치합니다.
+
+```bash
+sudo apt update
+sudo apt install -y curl gnupg lsb-release ca-certificates
+
+sudo mkdir -p /etc/apt/keyrings
+curl -fsSL https://librealsense.intel.com/Debian/librealsense.pgp \
+| sudo gpg --dearmor -o /etc/apt/keyrings/librealsense.pgp
+
+echo "deb [arch=arm64 signed-by=/etc/apt/keyrings/librealsense.pgp] https://librealsense.intel.com/Debian/apt-repo $(lsb_release -cs) main" \
+| sudo tee /etc/apt/sources.list.d/librealsense.list >/dev/null
+
+sudo apt update
+sudo apt install -y librealsense2-utils
+```
+
+SSH 환경에서는 `realsense-viewer` 대신 아래 명령으로 장치 인식을 확인합니다.
+
+```bash
+rs-enumerate-devices
 ```
 
 ---
