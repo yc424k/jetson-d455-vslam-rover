@@ -98,32 +98,26 @@ sudo apt install -y \
   python3-vcstool
 ```
 
-쉘 환경 등록:
+쉘/워크스페이스 환경 등록(권장: 조건부 source):
 
 ```bash
-echo "source /opt/ros/humble/setup.bash" >> ~/.bashrc
+# 기존 중복 라인 정리
+sed -i '\|source /opt/ros/humble/setup.bash|d' ~/.bashrc
+sed -i '\|source ~/ros2_ws/install/setup.bash|d' ~/.bashrc
+
+# 파일이 존재할 때만 source
+echo 'if [ -f /opt/ros/humble/setup.bash ]; then source /opt/ros/humble/setup.bash; fi' >> ~/.bashrc
+echo 'if [ -f ~/ros2_ws/install/setup.bash ]; then source ~/ros2_ws/install/setup.bash; fi' >> ~/.bashrc
+
 source ~/.bashrc
 ```
 
 왜 필요한가:
 
-- `source /opt/ros/humble/setup.bash`는 ROS 2 기본 환경변수(`PATH`, `AMENT_PREFIX_PATH` 등)를 로드합니다.
-- 이 설정이 없으면 `ros2` 명령이 인식되지 않거나, ROS 패키지 탐색이 실패할 수 있습니다.
-- `~/.bashrc`에 넣어두면 새 터미널을 열 때마다 자동으로 ROS 2 환경이 적용됩니다.
-
-워크스페이스 환경 등록:
-
-```bash
-echo "source ~/ros2_ws/install/setup.bash" >> ~/.bashrc
-source ~/.bashrc
-```
-
-왜 필요한가:
-
-- `~/ros2_ws/install/setup.bash`는 내 워크스페이스에서 빌드한 패키지를 ROS가 찾을 수 있게 합니다(overlay).
-- 이 설정이 있어야 `ros2 run`/`ros2 launch`에서 직접 만든 패키지와 로컬 수정본이 반영됩니다.
+- `/opt/ros/humble/setup.bash`는 ROS 2 기본 환경변수(`PATH`, `AMENT_PREFIX_PATH` 등)를 로드합니다.
+- `~/ros2_ws/install/setup.bash`는 로컬에서 빌드한 패키지를 ROS가 찾게 하는 overlay 설정입니다.
 - 적용 순서는 `ROS 기본 환경 -> 워크스페이스 환경`이 맞습니다.
-- `~/ros2_ws/install/setup.bash`는 `colcon build` 이후 생성되므로, 첫 빌드 전에는 파일이 없을 수 있습니다.
+- `~/ros2_ws/install/setup.bash`는 `colcon build` 이후 생성되므로, 조건부 source를 쓰면 첫 빌드 전에도 에러 없이 동작합니다.
 
 > 참고: 환경에 따라 의존 패키지/저장소 추가가 필요할 수 있습니다.
 
