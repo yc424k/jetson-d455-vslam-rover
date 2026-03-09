@@ -58,7 +58,7 @@ sudo reboot
 sudo apt install -y \
   git curl wget vim tmux htop unzip \
   build-essential cmake pkg-config \
-  python3-pip python3-colcon-common-extensions python3-vcstool
+  python3-pip
 ```
 
 ### 작업 디렉터리 구성
@@ -82,7 +82,20 @@ sudo apt install -y software-properties-common
 sudo add-apt-repository universe -y
 
 sudo apt update
-sudo apt install -y ros-humble-desktop
+sudo apt install -y curl
+
+export ROS_APT_SOURCE_VERSION=$(curl -s https://api.github.com/repos/ros-infrastructure/ros-apt-source/releases/latest | grep -F "tag_name" | awk -F\" '{print $4}')
+
+curl -L -o /tmp/ros2-apt-source.deb \
+"https://github.com/ros-infrastructure/ros-apt-source/releases/download/${ROS_APT_SOURCE_VERSION}/ros2-apt-source_${ROS_APT_SOURCE_VERSION}.$(. /etc/os-release && echo ${UBUNTU_CODENAME:-${VERSION_CODENAME}})_all.deb"
+
+sudo dpkg -i /tmp/ros2-apt-source.deb
+sudo apt update
+
+sudo apt install -y \
+  ros-humble-desktop \
+  python3-colcon-common-extensions \
+  python3-vcstool
 ```
 
 쉘 환경 등록:
@@ -277,6 +290,25 @@ ros2 topic echo /odom --once
 - 시각 특징이 부족한 환경(단색/반사/암부)에서는 tracking 성능 저하 가능
 - 모터 제어는 반드시 저속부터 시작, 최대 속도 테스트는 마지막 단계에 수행
 
+### `Unable to locate package python3-colcon-common-extensions / python3-vcstool` 에러
+
+JetPack 6.2.2(ubuntu 22.04/jammy) 환경에서는 `universe`만 추가한 상태로는
+해당 패키지가 보이지 않을 수 있습니다. 아래처럼 ROS 2 apt 소스를 먼저 등록한 뒤 설치합니다.
+
+```bash
+sudo apt update && sudo apt install -y curl
+
+export ROS_APT_SOURCE_VERSION=$(curl -s https://api.github.com/repos/ros-infrastructure/ros-apt-source/releases/latest | grep -F "tag_name" | awk -F\" '{print $4}')
+
+curl -L -o /tmp/ros2-apt-source.deb \
+"https://github.com/ros-infrastructure/ros-apt-source/releases/download/${ROS_APT_SOURCE_VERSION}/ros2-apt-source_${ROS_APT_SOURCE_VERSION}.$(. /etc/os-release && echo ${UBUNTU_CODENAME:-${VERSION_CODENAME}})_all.deb"
+
+sudo dpkg -i /tmp/ros2-apt-source.deb
+sudo apt update
+
+sudo apt install -y python3-colcon-common-extensions python3-vcstool
+```
+
 ---
 
 ## 14) 운영 원칙 요약
@@ -285,4 +317,3 @@ ros2 topic echo /odom --once
 - **SLAM 안정화 후 모터 제어 통합**
 - **항상 저속/단계적 검증**
 - **로그(rosbag) 기반으로 튜닝**
-
