@@ -444,11 +444,15 @@ ros2 run tf2_ros tf2_echo map base
 
 ---
 
-## 8) 모터 제어 드라이버 연동 (사용 예정 저장소)
+## 8) 모터 제어 드라이버 연동 (yc424k 포크 기준)
 
 사용 드라이버:
 
-- `https://github.com/Lee-seokgwon/md_motor_driver_ros2`
+- `https://github.com/yc424k/md_motor_driver_ros2`
+- 본 가이드 기준 수정사항:
+  - 4AWD에서 좌(A)/우(B) 드라이버 분리 제어 파라미터 추가
+  - `cmd_vel` timeout 기반 자동 정지
+  - `left_sign`, `right_sign` 방향 부호 보정 파라미터 지원
 
 ### 적용 전 조건 (권장)
 
@@ -462,7 +466,7 @@ ros2 run tf2_ros tf2_echo map base
 
 ```bash
 cd ~/ros2_ws/src
-git clone https://github.com/Lee-seokgwon/md_motor_driver_ros2.git
+git clone https://github.com/yc424k/md_motor_driver_ros2.git
 ```
 
 ### 의존성: `serial` 패키지 설치
@@ -500,10 +504,20 @@ ros2 pkg list | grep -E "^md_controller$|^md_teleop$|^serial$"
 
 기본 파라미터는 아래 launch 파일에 정의되어 있습니다.
 
+공통:
+
 - `Port` (기본 `/dev/ttyMotor`)
 - `Baudrate` (기본 `57600`)
 - `wheel_radius`, `wheel_base`
-- `GearRatio`, `poles`
+- `cmd_timeout_ms`, `max_driver_rpm`
+
+왼쪽(A) 드라이버:
+
+- `ID`, `MDT`, `GearRatio`, `poles`, `left_sign`
+
+오른쪽(B) 드라이버:
+
+- `right_enabled`, `RightID`, `RightMDT`, `RightGearRatio`, `right_sign`
 
 파일 경로:
 
@@ -522,6 +536,8 @@ ls -l /dev/ttyMotor /dev/ttyUSB* /dev/ttyACM* 2>/dev/null
 ```
 
 - `/dev/ttyMotor`가 없으면 launch 파라미터 `Port`를 실제 장치명(예: `/dev/ttyUSB0`)으로 변경합니다.
+- 현재 포크 구현은 **단일 RS485 버스(단일 Port) + 좌/우 드라이버 ID 분리** 방식입니다.
+- A/B 드라이버가 서로 다른 물리 포트(`/dev/ttyUSB0`, `/dev/ttyUSB1`)이면 추가 코드 확장이 필요합니다.
 
 ### 1단계: 모터 드라이버 단독 bring-up
 
@@ -556,6 +572,12 @@ ros2 topic pub -1 /cmd_vel geometry_msgs/msg/Twist \
 ros2 topic pub -1 /cmd_vel geometry_msgs/msg/Twist \
 "{linear: {x: 0.0, y: 0.0, z: 0.0}, angular: {x: 0.0, y: 0.0, z: 0.2}}"
 ```
+
+방향/기어비 보정:
+
+- 직진 명령에서 한쪽이 역방향이면 `left_sign` 또는 `right_sign`를 `-1`로 조정
+- 좌/우 드라이버 감속비가 다르면 `GearRatio`와 `RightGearRatio`를 각각 맞춤
+- 오른쪽 드라이버를 비활성화하려면 `right_enabled:=False`
 
 ### 3단계: Visual SLAM과 결합
 
