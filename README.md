@@ -61,6 +61,36 @@ sudo apt install -y \
   python3-pip
 ```
 
+### Docker 설치/권한 설정 (Isaac ROS 컨테이너 필수)
+
+JetPack 6.x에서 Docker가 이미 설치된 경우도 있지만, 아래 순서로 점검/설정하는 것을 권장합니다.
+
+```bash
+# Docker가 없으면 설치
+if ! command -v docker >/dev/null 2>&1; then
+  sudo apt update
+  sudo apt install -y docker.io docker-compose-plugin
+fi
+
+# Docker 서비스 시작
+sudo systemctl enable --now docker
+
+# 현재 사용자를 docker 그룹에 추가
+sudo usermod -aG docker $USER
+
+# 현재 세션에 그룹 반영 (또는 SSH 재접속)
+newgrp docker
+
+# 동작 확인
+docker --version
+docker ps
+```
+
+확인 포인트:
+
+- `docker ps`가 `permission denied` 없이 실행되어야 합니다.
+- Isaac ROS 실행 전 `id -nG | grep docker`에서 `docker` 그룹이 보여야 합니다.
+
 ### 작업 디렉터리 구성
 
 ```bash
@@ -345,6 +375,7 @@ cd ${ISAAC_ROS_WS}
 ```
 
 > 최초 1회는 Docker 이미지 빌드로 시간이 오래 걸릴 수 있습니다.
+> `docker` 그룹 권한 이슈가 나면 3번 섹션의 Docker 설정을 먼저 완료합니다.
 
 ### 3) 컨테이너 내부에서 빌드
 
@@ -552,6 +583,23 @@ if [ ! -f /etc/ros/rosdep/sources.list.d/20-default.list ]; then
 fi
 
 rosdep update
+```
+
+### `User ... is not a member of the 'docker' group` 에러
+
+Isaac ROS `run_dev.sh` 실행 시 발생하는 권한 에러입니다.
+
+```bash
+sudo systemctl enable --now docker
+sudo usermod -aG docker $USER
+newgrp docker
+```
+
+그룹 반영 확인:
+
+```bash
+id -nG | grep docker
+docker ps
 ```
 
 ### `No HID info provided, IMU is disabled` 에러
