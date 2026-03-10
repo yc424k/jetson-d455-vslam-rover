@@ -518,6 +518,7 @@ ros2 pkg list | grep -E "^md_controller$|^md_teleop$|^serial$"
 오른쪽(B) 드라이버:
 
 - `right_enabled`, `RightID`, `RightMDT`, `RightGearRatio`, `right_sign`
+- `RightUseSeparatePort`, `RightPort`, `RightBaudrate`
 
 파일 경로:
 
@@ -536,8 +537,17 @@ ls -l /dev/ttyMotor /dev/ttyUSB* /dev/ttyACM* 2>/dev/null
 ```
 
 - `/dev/ttyMotor`가 없으면 launch 파라미터 `Port`를 실제 장치명(예: `/dev/ttyUSB0`)으로 변경합니다.
-- 현재 포크 구현은 **단일 RS485 버스(단일 Port) + 좌/우 드라이버 ID 분리** 방식입니다.
-- A/B 드라이버가 서로 다른 물리 포트(`/dev/ttyUSB0`, `/dev/ttyUSB1`)이면 추가 코드 확장이 필요합니다.
+- 좌/우가 같은 RS485 버스면 `Port` 1개 + `ID/RightID` 분리로 사용합니다.
+- 좌/우가 서로 다른 물리 포트면 `RightUseSeparatePort:=True`로 설정하고 `RightPort`를 별도로 지정합니다.
+
+2포트 예시:
+
+```python
+"Port": "/dev/ttyUSB0",            # Left(A)
+"RightUseSeparatePort": True,
+"RightPort": "/dev/ttyUSB1",       # Right(B)
+"RightBaudrate": 57600,
+```
 
 ### 1단계: 모터 드라이버 단독 bring-up
 
