@@ -362,10 +362,15 @@ cd ${ISAAC_ROS_WS}/src
 
 git clone -b release-3.2 https://github.com/NVIDIA-ISAAC-ROS/isaac_ros_common.git
 git clone -b release-3.2 https://github.com/NVIDIA-ISAAC-ROS/isaac_ros_visual_slam.git
+git clone https://github.com/IntelRealSense/realsense-ros.git
+cd realsense-ros
+git checkout 4.56.4
+cd ${ISAAC_ROS_WS}/src
 ```
 
 > RealSense 드라이버/udev 규칙은 5~6번 섹션 완료 상태를 전제로 합니다.
 > JetPack 6.2.2 + ROS 2 Humble 기준으로 `release-3.2` 태그를 사용합니다.
+> `isaac_ros_visual_slam_realsense.launch.py`는 컨테이너 안에서 `realsense2_camera` 패키지를 직접 실행하므로, `realsense-ros` 소스도 같은 워크스페이스(`isaac_ros-dev/src`)에 있어야 합니다.
 
 ### 2) Isaac ROS 환경 활성화
 
@@ -381,10 +386,13 @@ cd ${ISAAC_ROS_WS}
 
 ```bash
 cd /workspaces/isaac_ros-dev
+source /opt/ros/humble/setup.bash
 rosdep update
 rosdep install --from-paths src --ignore-src -r -y
-colcon build --symlink-install
+colcon build --symlink-install --packages-up-to realsense2_camera realsense2_description isaac_ros_visual_slam
 source install/setup.bash
+
+ros2 pkg list | grep -E "^realsense2_camera$|^realsense2_camera_msgs$|^realsense2_description$|^isaac_ros_visual_slam$"
 ```
 
 ### 4) Visual SLAM 실행 (RealSense + IMU)
@@ -677,6 +685,63 @@ grep -n "NVIDIA_VISIBLE_DEVICES" src/isaac_ros_common/scripts/run_dev.sh
 주의:
 
 - `isaac_ros_common` 업데이트(`git pull`) 후에는 `run_dev.sh`가 원복될 수 있으므로 같은 수정을 다시 적용해야 합니다.
+
+### `package 'realsense2_camera' not found` 에러 (Isaac ROS 컨테이너)
+
+증상 예시:
+
+- `ros2 launch isaac_ros_visual_slam isaac_ros_visual_slam_realsense.launch.py` 실행 시
+- `package 'realsense2_camera' not found`
+
+원인:
+
+- `isaac_ros_visual_slam_realsense.launch.py`는 `realsense2_camera_node`를 함께 실행합니다.
+- 컨테이너 환경(`/workspaces/isaac_ros-dev/install`, `/opt/ros/humble`)에 `realsense2_camera` 패키지가 없으면 launch가 즉시 종료됩니다.
+- 호스트의 다른 워크스페이스(`~/ros2_ws`)에만 빌드되어 있으면 컨테이너에서는 보이지 않습니다.
+
+해결:
+
+```bash
+cd /workspaces/isaac_ros-dev/src
+[ -d realsense-ros ] || git clone https://github.com/IntelRealSense/realsense-ros.git
+cd realsense-ros
+git fetch --tags
+git checkout 4.56.4
+
+cd /workspaces/isaac_ros-dev
+source /opt/ros/humble/setup.bash
+rosdep update
+rosdep install --from-paths src --ignore-src -r -y
+colcon build --symlink-install --packages-up-to realsense2_camera realsense2_description isaac_ros_visual_slam
+source install/setup.bash
+
+ros2 pkg list | grep -E "^realsense2_camera$|^realsense2_camera_msgs$|^realsense2_description$"
+```
+
+### `Failed to find ... install/realsense2_camera_msgs/.../package.sh` 에러
+
+원인:
+
+- `colcon build --packages-select ...`로 `realsense2_camera`만 선택 빌드하면,
+  의존 패키지 `realsense2_camera_msgs`가 누락되어 발생할 수 있습니다.
+
+해결:
+
+```bash
+cd /workspaces/isaac_ros-dev
+source /opt/ros/humble/setup.bash
+
+rm -rf build/realsense2_* install/realsense2_*
+colcon build --symlink-install --packages-up-to realsense2_camera realsense2_description isaac_ros_visual_slam
+source install/setup.bash
+```
+
+대안(선택 빌드 유지 시):
+
+```bash
+colcon build --symlink-install --packages-select \
+  realsense2_camera_msgs realsense2_camera realsense2_description isaac_ros_visual_slam
+```
 
 ### `No HID info provided, IMU is disabled` 에러
 
