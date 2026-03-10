@@ -411,6 +411,15 @@ ros2 topic hz /visual_slam/tracking/odometry
 ros2 topic echo /visual_slam/status --once
 ```
 
+입력이 안 붙는 경우 점검:
+
+```bash
+ros2 node info /visual_slam_node
+```
+
+- 구독 토픽이 `/camera/infra1...`인데 실제 카메라 토픽이 `/camera/camera/infra1...`이면 네임스페이스 불일치입니다.
+- 이 경우 13번 트러블슈팅의 `status/odometry 미발행` 항목대로 remap을 `/camera/camera/...`로 수정합니다.
+
 TF 확인(필요 시):
 
 ```bash
@@ -441,23 +450,123 @@ ros2 run tf2_ros tf2_echo map base
 
 - `https://github.com/Lee-seokgwon/md_motor_driver_ros2`
 
-### 소스 가져오기
+### 적용 전 조건 (권장)
+
+- Visual SLAM 상태가 이미 안정적일 것
+  - `/visual_slam/status`에서 `vo_state: 1` 확인
+  - `/visual_slam/tracking/odometry`가 안정적으로 발행
+- 모터 테스트는 반드시 **바퀴를 띄운 무부하 상태**에서 시작
+- E-stop(비상정지) 하드웨어가 준비된 상태에서 진행
+
+### 소스 가져오기 (Jetson Native ROS 워크스페이스)
 
 ```bash
 cd ~/ros2_ws/src
 git clone https://github.com/Lee-seokgwon/md_motor_driver_ros2.git
 ```
 
-### 빌드
+### 의존성: `serial` 패키지 설치
+
+`md_controller`는 `serial` 라이브러리 패키지를 사용합니다. ROS 2 Humble에서 바로 apt 설치가 안 되는 경우가 있어, 아래처럼 소스 빌드로 준비합니다.
 
 ```bash
+cd ~/ros2_ws/src
+[ -d serial-ros2 ] || git clone https://github.com/RoverRobotics-forks/serial-ros2.git
+
 cd ~/ros2_ws
+source /opt/ros/humble/setup.bash
 rosdep install --from-paths src --ignore-src -r -y
-colcon build --symlink-install
+colcon build --symlink-install --packages-up-to serial
 source install/setup.bash
 ```
 
-### 연동 시 권장 사항
+### 빌드 (`md_controller`, `md_teleop`)
+
+```bash
+cd ~/ros2_ws
+source /opt/ros/humble/setup.bash
+rosdep install --from-paths src --ignore-src -r -y
+colcon build --symlink-install --packages-up-to md_controller md_teleop
+source install/setup.bash
+```
+
+패키지 확인:
+
+```bash
+ros2 pkg list | grep -E "^md_controller$|^md_teleop$|^serial$"
+```
+
+### 드라이버 파라미터 확인 (필수)
+
+기본 파라미터는 아래 launch 파일에 정의되어 있습니다.
+
+- `Port` (기본 `/dev/ttyMotor`)
+- `Baudrate` (기본 `57600`)
+- `wheel_radius`, `wheel_base`
+- `GearRatio`, `poles`
+
+파일 경로:
+
+- `~/ros2_ws/src/md_motor_driver_ros2/md_controller/launch/md_controller.launch.py`
+
+실제 하드웨어에 맞게 아래 파일을 수정 후 테스트합니다.
+
+```bash
+vim ~/ros2_ws/src/md_motor_driver_ros2/md_controller/launch/md_controller.launch.py
+```
+
+포트 확인:
+
+```bash
+ls -l /dev/ttyMotor /dev/ttyUSB* /dev/ttyACM* 2>/dev/null
+```
+
+- `/dev/ttyMotor`가 없으면 launch 파라미터 `Port`를 실제 장치명(예: `/dev/ttyUSB0`)으로 변경합니다.
+
+### 1단계: 모터 드라이버 단독 bring-up
+
+```bash
+source ~/ros2_ws/install/setup.bash
+ros2 launch md_controller md_controller.launch.py use_rviz:=False
+```
+
+확인:
+
+```bash
+ros2 node list | grep md_controller
+```
+
+### 2단계: `/cmd_vel` 저속 수동 테스트
+
+별도 터미널에서:
+
+```bash
+source ~/ros2_ws/install/setup.bash
+ros2 run md_teleop md_teleop_key_node
+```
+
+또는 단발성 명령 테스트:
+
+```bash
+# 아주 작은 직진 명령 (1초)
+ros2 topic pub -1 /cmd_vel geometry_msgs/msg/Twist \
+"{linear: {x: 0.05, y: 0.0, z: 0.0}, angular: {x: 0.0, y: 0.0, z: 0.0}}"
+
+# 아주 작은 회전 명령 (1초)
+ros2 topic pub -1 /cmd_vel geometry_msgs/msg/Twist \
+"{linear: {x: 0.0, y: 0.0, z: 0.0}, angular: {x: 0.0, y: 0.0, z: 0.2}}"
+```
+
+### 3단계: Visual SLAM과 결합
+
+권장 순서:
+
+1. Visual SLAM 세션 유지 (`/visual_slam/status`, `/visual_slam/tracking/odometry` 정상)
+2. 모터 드라이버 세션 별도 실행
+3. 상위 제어 입력(`/cmd_vel`)을 저속으로만 인가
+4. 직진/회전/정지 반복 테스트 후 속도 상향
+
+### 안전 설정 권장 (연동 전)
 
 - `cmd_vel` 입력 주기 제한(타임아웃 포함)
 - 가속/감속 제한(slew rate limit)
@@ -742,6 +851,64 @@ source install/setup.bash
 colcon build --symlink-install --packages-select \
   realsense2_camera_msgs realsense2_camera realsense2_description isaac_ros_visual_slam
 ```
+
+### `The message type 'isaac_ros_visual_slam_interfaces/msg/VisualSlamStatus' is invalid`
+
+원인:
+
+- 컨테이너 셸에서 워크스페이스 overlay(`install/setup.bash`)가 로드되지 않은 상태입니다.
+- `isaac_ros_visual_slam_interfaces` 타입을 찾지 못해 `ros2 topic echo /visual_slam/status --once`가 실패합니다.
+
+해결:
+
+```bash
+source /opt/ros/humble/setup.bash
+source /workspaces/isaac_ros-dev/install/setup.bash
+ros2 interface show isaac_ros_visual_slam_interfaces/msg/VisualSlamStatus
+```
+
+- 위 명령에서 메시지 정의가 출력되면 타입 인식은 정상입니다.
+
+### `/visual_slam/status --once`가 대기만 하거나 `/visual_slam/tracking/odometry`가 미발행
+
+원인(대표):
+
+- `visual_slam_node` 구독 입력과 실제 RealSense 토픽 네임스페이스가 다릅니다.
+- 예: 구독은 `/camera/infra1...`, 실제 발행은 `/camera/camera/infra1...`
+
+진단:
+
+```bash
+ros2 node info /visual_slam_node
+ros2 topic list | grep -E "/camera/.*/(infra1|infra2|imu)"
+```
+
+해결(launch remap을 `/camera/camera/...`로 수정):
+
+```bash
+FILE=/workspaces/isaac_ros-dev/src/isaac_ros_visual_slam/isaac_ros_visual_slam/launch/isaac_ros_visual_slam_realsense.launch.py
+
+sed -i "s|'camera/infra1/image_rect_raw'|'camera/camera/infra1/image_rect_raw'|g" $FILE
+sed -i "s|'camera/infra1/camera_info'|'camera/camera/infra1/camera_info'|g" $FILE
+sed -i "s|'camera/infra2/image_rect_raw'|'camera/camera/infra2/image_rect_raw'|g" $FILE
+sed -i "s|'camera/infra2/camera_info'|'camera/camera/infra2/camera_info'|g" $FILE
+sed -i "s|'camera/imu'|'camera/camera/imu'|g" $FILE
+
+cd /workspaces/isaac_ros-dev
+source /opt/ros/humble/setup.bash
+colcon build --symlink-install --packages-select isaac_ros_visual_slam
+source install/setup.bash
+```
+
+검증:
+
+```bash
+ros2 node info /visual_slam_node | grep -E "/camera/camera/(infra1|infra2|imu)" -n
+ros2 topic echo /visual_slam/status --once
+ros2 topic hz /visual_slam/tracking/odometry
+```
+
+- 정상 기준: `vo_state: 1` 출력, odometry 약 30Hz.
 
 ### `No HID info provided, IMU is disabled` 에러
 
