@@ -585,6 +585,44 @@ fi
 rosdep update
 ```
 
+### `W: GPG error: https://dl.yarnpkg.com/debian ... NO_PUBKEY 62D54FD4003F6525` 경고
+
+원인:
+
+- 시스템에 Yarn APT 저장소(`dl.yarnpkg.com`)가 등록되어 있는데, 해당 저장소 서명키가 키링에 없거나 깨진 상태입니다.
+- 이 경우 `apt update` 시 서명 검증이 실패하며 GPG 경고가 출력됩니다.
+
+해결 1) Yarn을 사용하지 않는 경우(권장: 불필요 저장소 제거):
+
+```bash
+sudo rm -f /etc/apt/sources.list.d/yarn.list
+sudo apt update
+```
+
+해결 2) Yarn을 계속 사용하는 경우(키 재등록):
+
+```bash
+sudo apt update
+sudo apt install -y curl gnupg ca-certificates
+
+sudo mkdir -p /etc/apt/keyrings
+curl -fsSL https://dl.yarnpkg.com/debian/pubkey.gpg \
+| sudo gpg --dearmor -o /etc/apt/keyrings/yarn.gpg
+
+echo "deb [signed-by=/etc/apt/keyrings/yarn.gpg] https://dl.yarnpkg.com/debian/ stable main" \
+| sudo tee /etc/apt/sources.list.d/yarn.list >/dev/null
+
+sudo apt update
+```
+
+확인:
+
+```bash
+sudo apt update
+```
+
+- 같은 `NO_PUBKEY 62D54FD4003F6525` 경고가 사라지면 정상입니다.
+
 ### `User ... is not a member of the 'docker' group` 에러
 
 Isaac ROS `run_dev.sh` 실행 시 발생하는 권한 에러입니다.
