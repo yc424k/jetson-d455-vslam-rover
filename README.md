@@ -602,6 +602,44 @@ id -nG | grep docker
 docker ps
 ```
 
+### `failed to inject CDI devices ... nvidia.com/pva=all` 에러 (Orin Nano)
+
+증상 예시:
+
+- `OCI runtime create failed`
+- `failed to inject CDI devices`
+- `unresolvable CDI devices nvidia.com/pva=all`
+
+원인:
+
+- `run_dev.sh`(aarch64 경로)가 기본값으로 `NVIDIA_VISIBLE_DEVICES=nvidia.com/gpu=all,nvidia.com/pva=all`를 넣습니다.
+- Jetson Orin Nano 환경에서는 PVA 디바이스를 직접 사용하지 않는 구성인 경우가 많아, `pva=all` 요청이 컨테이너 시작 실패를 유발할 수 있습니다.
+
+해결:
+
+```bash
+cd ~/workspaces/isaac_ros-dev
+
+# PVA 요청 제거 (gpu만 사용)
+sed -i 's|nvidia.com/gpu=all,nvidia.com/pva=all|nvidia.com/gpu=all|g' \
+  src/isaac_ros_common/scripts/run_dev.sh
+
+# 변경 확인
+grep -n "NVIDIA_VISIBLE_DEVICES" src/isaac_ros_common/scripts/run_dev.sh
+
+# 컨테이너 재실행
+./src/isaac_ros_common/scripts/run_dev.sh
+```
+
+왜 이 방법이 필요한가:
+
+- 현재 에러는 Visual SLAM 로직 문제가 아니라 **컨테이너 런타임의 디바이스 주입 단계**에서 실패하는 문제입니다.
+- 따라서 `NVIDIA_VISIBLE_DEVICES`에서 사용 불가한 `pva` 항목을 제거하면, Docker가 GPU 디바이스만으로 정상 기동할 수 있습니다.
+
+주의:
+
+- `isaac_ros_common` 업데이트(`git pull`) 후에는 `run_dev.sh`가 원복될 수 있으므로 같은 수정을 다시 적용해야 합니다.
+
 ### `No HID info provided, IMU is disabled` 에러
 
 의미:
