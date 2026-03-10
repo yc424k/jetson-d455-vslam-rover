@@ -224,20 +224,22 @@ ros2 launch realsense2_camera rs_launch.py enable_gyro:=true enable_accel:=true
 ros2 topic list | grep -E "/camera/(color|depth|gyro|accel|imu)"
 ```
 
+> 네임스페이스에 따라 `/camera/camera/...` 형태로 보일 수 있습니다. 먼저 `ros2 topic list`로 실제 토픽 이름을 확인한 뒤 그대로 사용합니다.
+
 3) 주요 토픽 주기 확인:
 
 ```bash
-ros2 topic hz /camera/color/image_raw
-ros2 topic hz /camera/depth/image_rect_raw
-ros2 topic hz /camera/gyro/sample
-ros2 topic hz /camera/accel/sample
+ros2 topic hz /camera/camera/color/image_raw
+ros2 topic hz /camera/camera/depth/image_rect_raw
+ros2 topic hz /camera/camera/gyro/sample
+ros2 topic hz /camera/camera/accel/sample
 ```
 
 4) 실제 메시지 1개 확인:
 
 ```bash
-ros2 topic echo /camera/gyro/sample --once
-ros2 topic echo /camera/accel/sample --once
+ros2 topic echo /camera/camera/gyro/sample --once
+ros2 topic echo /camera/camera/accel/sample --once
 ```
 
 판단 기준(초기 점검):
@@ -245,6 +247,75 @@ ros2 topic echo /camera/accel/sample --once
 - `ros2 topic list`에 color/depth/gyro/accel 관련 토픽이 보인다.
 - `ros2 topic hz`에서 값이 0으로 고정되지 않고 연속적으로 갱신된다.
 - `--once`로 실제 메시지(헤더/타임스탬프 포함)가 출력된다.
+
+### IMU 커널 활성화 (Jetson, 필요 시)
+
+아래 조건이면 커널 HID/IIO 옵션이 비활성화된 경우가 많습니다.
+
+- launch 로그에 `No HID info provided, IMU is disabled`가 출력됨
+- `ros2 topic list | grep -E "/camera/.*/(gyro|accel|imu)"` 결과가 비어 있음
+- `modprobe hid_sensor_accel_3d` 시 `Module ... not found` 발생
+
+1) 먼저 모듈 존재 여부 확인:
+
+```bash
+modinfo hid_sensor_accel_3d
+modinfo hid_sensor_gyro_3d
+```
+
+2) 모듈이 없으면(권장: Jetson에서 직접) 커널 옵션 활성화 후 재빌드:
+
+```bash
+sudo apt update
+sudo apt install -y build-essential bc flex bison libssl-dev zstd libncurses-dev dwarves wget
+
+mkdir -p ~/kernel_r36 && cd ~/kernel_r36
+wget -O public_sources.tbz2 https://developer.download.nvidia.com/embedded/L4T/r36_Release_v5.0/sources/public_sources.tbz2
+tar xf public_sources.tbz2
+
+KERNEL_TBZ2=$(find . -name kernel_src.tbz2 | head -n1)
+mkdir -p Linux_for_Tegra/source
+tar xf "$KERNEL_TBZ2" -C Linux_for_Tegra/source
+
+cd Linux_for_Tegra/source/kernel/kernel-jammy-src
+zcat /proc/config.gz > .config
+
+./scripts/config --enable HID_SENSOR_HUB
+./scripts/config --enable HID_SENSOR_IIO_COMMON
+./scripts/config --module HID_SENSOR_ACCEL_3D
+./scripts/config --module HID_SENSOR_GYRO_3D
+./scripts/config --enable IIO
+./scripts/config --enable IIO_BUFFER
+./scripts/config --enable IIO_TRIGGERED_BUFFER
+./scripts/config --set-str LOCALVERSION "-tegra"
+./scripts/config --disable LOCALVERSION_AUTO
+
+make olddefconfig
+make -j"$(nproc)" Image modules
+
+sudo cp /boot/Image /boot/Image.backup.$(date +%F-%H%M)
+sudo cp arch/arm64/boot/Image /boot/Image
+sudo make modules_install
+sudo depmod -a
+sudo nv-update-initrd
+sudo reboot
+```
+
+3) 재부팅 후 확인:
+
+```bash
+modprobe hid_sensor_accel_3d
+modprobe hid_sensor_gyro_3d
+lsmod | grep hid_sensor
+
+ros2 launch realsense2_camera rs_launch.py enable_gyro:=true enable_accel:=true
+ros2 topic list | grep -E "/camera/.*/(gyro|accel|imu)"
+```
+
+왜 필요한가:
+
+- D455의 IMU는 HID/IIO 경로를 사용합니다.
+- JetPack 6.x 기본 커널 설정에서 해당 옵션이 빠져 있으면 RGB/Depth는 동작해도 IMU 토픽은 생성되지 않습니다.
 
 ---
 
@@ -423,6 +494,22 @@ fi
 
 rosdep update
 ```
+
+### `No HID info provided, IMU is disabled` 에러
+
+의미:
+
+- 카메라는 인식됐지만 IMU(HID) 정보를 가져오지 못해 `gyro/accel` 토픽이 비활성화된 상태입니다.
+
+점검:
+
+```bash
+ros2 topic list | grep -E "/camera/.*/(gyro|accel|imu)"
+modprobe hid_sensor_accel_3d
+modprobe hid_sensor_gyro_3d
+```
+
+`modprobe`에서 `Module ... not found`가 나오면 6번의 `IMU 커널 활성화` 절차대로 커널 옵션을 켜고 재빌드합니다.
 
 ### `Could not find ... realsense2 ... requested version "2.56.6"` 에러
 
