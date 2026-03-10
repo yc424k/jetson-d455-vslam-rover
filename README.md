@@ -321,7 +321,66 @@ ros2 topic list | grep -E "/camera/.*/(gyro|accel|imu)"
 
 ## 7) Isaac ROS Visual SLAM 적용 순서
 
-권장 순서:
+아래는 **Isaac ROS 컨테이너 기반(권장)** 명령 순서입니다.
+
+### 1) Isaac ROS 워크스페이스 준비 (Jetson)
+
+```bash
+export ISAAC_ROS_WS=~/workspaces/isaac_ros-dev
+mkdir -p ${ISAAC_ROS_WS}/src
+cd ${ISAAC_ROS_WS}/src
+
+git clone -b release-3.2 https://github.com/NVIDIA-ISAAC-ROS/isaac_ros_common.git
+git clone -b release-3.2 https://github.com/NVIDIA-ISAAC-ROS/isaac_ros_visual_slam.git
+```
+
+> RealSense 드라이버/udev 규칙은 5~6번 섹션 완료 상태를 전제로 합니다.
+> JetPack 6.2.2 + ROS 2 Humble 기준으로 `release-3.2` 태그를 사용합니다.
+
+### 2) Isaac ROS 환경 활성화
+
+```bash
+cd ${ISAAC_ROS_WS}
+./src/isaac_ros_common/scripts/run_dev.sh
+```
+
+> 최초 1회는 Docker 이미지 빌드로 시간이 오래 걸릴 수 있습니다.
+
+### 3) 컨테이너 내부에서 빌드
+
+```bash
+cd /workspaces/isaac_ros-dev
+rosdep update
+rosdep install --from-paths src --ignore-src -r -y
+colcon build --symlink-install
+source install/setup.bash
+```
+
+### 4) Visual SLAM 실행 (RealSense + IMU)
+
+```bash
+ros2 launch isaac_ros_visual_slam isaac_ros_visual_slam_realsense.launch.py
+```
+
+### 5) 동작 확인 (다른 터미널)
+
+```bash
+cd ${ISAAC_ROS_WS}
+./src/isaac_ros_common/scripts/run_dev.sh
+ros2 topic list | grep -E "visual_slam|/camera/.*/(infra|gyro|accel|imu)"
+ros2 topic hz /visual_slam/tracking/odometry
+ros2 topic echo /visual_slam/status --once
+```
+
+TF 확인(필요 시):
+
+```bash
+ros2 run tf2_ros tf2_echo map base
+```
+
+> 로봇 프레임 이름이 `base`가 아니면 `base_link` 또는 `camera_link`로 바꿔서 확인합니다.
+
+권장 검증 순서:
 
 1. D455 RGB + Depth + IMU 토픽 안정화
 2. Visual SLAM 실행
