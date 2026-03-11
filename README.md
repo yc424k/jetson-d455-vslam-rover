@@ -634,6 +634,38 @@ ros2 topic pub -1 /cmd_vel geometry_msgs/msg/Twist \
   - 창3: 모터 제어 노드
   - 창4: 토픽 모니터링/로그
 
+### Foxglove Bridge 설치/실행 (Jetson)
+
+Jetson에서 SLAM을 그래픽으로 실시간 확인할 때 권장합니다.
+
+1) Jetson에 패키지 설치:
+
+```bash
+sudo apt update
+sudo apt install -y ros-humble-foxglove-bridge
+```
+
+2) 브리지 실행 (SLAM 토픽이 보이는 동일 환경에서 실행):
+
+```bash
+source /opt/ros/humble/setup.bash
+ros2 launch foxglove_bridge foxglove_bridge_launch.xml port:=8765 address:=0.0.0.0
+```
+
+3) MacBook에서 접속:
+
+- Foxglove Studio 실행
+- Open connection -> WebSocket
+- `ws://<jetson_ip>:8765` 입력
+
+권장 확인 토픽:
+
+- `/visual_slam/status`
+- `/visual_slam/tracking/odometry`
+- `/visual_slam/tracking/slam_path`
+- `/visual_slam/vis/landmarks_cloud`
+- `/tf`
+
 기본 모니터링 명령:
 
 ```bash
