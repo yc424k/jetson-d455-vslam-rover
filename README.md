@@ -7,8 +7,26 @@
 - 로봇 제어 (md_motor_driver_ros2)
 - 원격 개발 (MacBook SSH)
 
+## 빠른 목차
+
+- [1) 목표 아키텍처](#sec-1)
+- [2) 사전 준비 체크리스트](#sec-2)
+- [3) Jetson 기본 환경 세팅](#sec-3)
+- [4) ROS 2 Humble 환경 준비](#sec-4)
+- [5) RealSense(D455) 연결 및 기본 확인](#sec-5)
+- [6) ROS 2 RealSense 드라이버 준비](#sec-6)
+- [7) Isaac ROS Visual SLAM 적용 순서](#sec-7)
+- [8) 모터 제어 드라이버 연동](#sec-8)
+- [9) 권장 ROS 2 노드 구조](#sec-9)
+- [10) 원격 개발 운영 방식 (MacBook)](#sec-10)
+- [11) 단계별 Bring-up 권장 순서](#sec-11)
+- [12) 초기 점검 체크리스트](#sec-12)
+- [13) 트러블슈팅 메모](#sec-13)
+- [14) 운영 원칙 요약](#sec-14)
+
 ---
 
+<a id="sec-1"></a>
 ## 1) 목표 아키텍처
 
 - **Jetson Orin Nano (JetPack 6.2.2)**
@@ -21,8 +39,7 @@
 - **MacBook**
   - SSH / VS Code Remote SSH / 로그 확인 / 시각화
 
----
-
+<a id="sec-2"></a>
 ## 2) 사전 준비 체크리스트
 
 ### 하드웨어
@@ -38,8 +55,7 @@
 - 같은 네트워크의 MacBook
 - SSH 접속 가능 상태
 
----
-
+<a id="sec-3"></a>
 ## 3) Jetson 기본 환경 세팅
 
 > 아래 명령은 Jetson에서 실행합니다.
@@ -97,8 +113,7 @@ docker ps
 mkdir -p ~/workspace ~/ros2_ws/src
 ```
 
----
-
+<a id="sec-4"></a>
 ## 4) ROS 2 Humble 환경 준비
 
 JetPack 6.x 계열에서는 ROS 2 설치 방식이 환경마다 조금 다를 수 있으므로,
@@ -151,8 +166,7 @@ source ~/.bashrc
 
 > 참고: 환경에 따라 의존 패키지/저장소 추가가 필요할 수 있습니다.
 
----
-
+<a id="sec-5"></a>
 ## 5) RealSense(D455) 연결 및 기본 확인
 
 ### 장치 인식 확인
@@ -178,8 +192,7 @@ rs-enumerate-devices
 
 > 실제 ROS 스트림 출력, 주기(`hz`), 프레임 드랍 확인은 **6번(드라이버 준비 후)** 단계에서 수행합니다.
 
----
-
+<a id="sec-6"></a>
 ## 6) ROS 2 RealSense 드라이버 준비
 
 ```bash
@@ -372,8 +385,7 @@ ros2 topic list | grep -E "/camera/.*/(gyro|accel|imu)"
 - D455의 IMU는 HID/IIO 경로를 사용합니다.
 - JetPack 6.x 기본 커널 설정에서 해당 옵션이 빠져 있으면 RGB/Depth는 동작해도 IMU 토픽은 생성되지 않습니다.
 
----
-
+<a id="sec-7"></a>
 ## 7) Isaac ROS Visual SLAM 적용 순서
 
 아래는 **Isaac ROS 컨테이너 기반(권장)** 명령 순서입니다.
@@ -467,8 +479,7 @@ ros2 run tf2_ros tf2_echo map base
 - 텍스처 부족 구간에서 tracking lost 여부
 - 진동 환경에서 pose 안정성
 
----
-
+<a id="sec-8"></a>
 ## 8) 모터 제어 드라이버 연동 (yc424k 포크 기준)
 
 사용 드라이버:
@@ -703,8 +714,7 @@ ros2 topic pub -1 /cmd_vel geometry_msgs/msg/Twist \
 - 비상정지(E-stop) 우선순위 최상위
 - 전원 불안정 대비 watchdog 적용
 
----
-
+<a id="sec-9"></a>
 ## 9) 권장 ROS 2 노드 구조
 
 - `realsense2_camera` : D455 센서 입력
@@ -720,8 +730,7 @@ ros2 topic pub -1 /cmd_vel geometry_msgs/msg/Twist \
 - 모터 제어 입력: `/cmd_vel_safe` -> `motor_driver_node`
 - 상태 추정: `/tf`, `/odom`
 
----
-
+<a id="sec-10"></a>
 ## 10) 원격 개발 운영 방식 (MacBook)
 
 - SSH 접속: `ssh <user>@<jetson_ip>`
@@ -773,8 +782,7 @@ ros2 topic hz /cmd_vel
 ros2 topic echo /odom --once
 ```
 
----
-
+<a id="sec-11"></a>
 ## 11) 단계별 Bring-up 권장 순서
 
 1. Jetson OS/네트워크 안정화
@@ -786,8 +794,7 @@ ros2 topic echo /odom --once
 7. 저속 폐루프 주행 테스트
 8. rosbag 기록 기반 튜닝
 
----
-
+<a id="sec-12"></a>
 ## 12) 초기 점검 체크리스트
 
 - [ ] D455가 USB 3.x로 안정 인식됨
@@ -797,8 +804,7 @@ ros2 topic echo /odom --once
 - [ ] E-stop 입력 시 즉시 정지 확인
 - [ ] 전원 강하 시 재시작/복구 절차 확인
 
----
-
+<a id="sec-13"></a>
 ## 13) 트러블슈팅 메모
 
 - USB 대역폭 부족 시 해상도/프레임레이트를 우선 낮춰 확인
@@ -1138,8 +1144,7 @@ git describe --tags --always
 - 원칙: `librealsense2` 버전과 `realsense-ros` 태그를 맞춘다.
 - 팀 문서/스크립트에서 `ros2-master` 고정 대신 태그 고정을 사용한다.
 
----
-
+<a id="sec-14"></a>
 ## 14) 운영 원칙 요약
 
 - **처음 목표는 "맵"보다 "안정적인 pose"**
