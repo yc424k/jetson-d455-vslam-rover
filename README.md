@@ -278,6 +278,31 @@ ros2 topic echo /camera/camera/accel/sample --once
 - `ros2 topic hz`에서 값이 0으로 고정되지 않고 연속적으로 갱신된다.
 - `--once`로 실제 메시지(헤더/타임스탬프 포함)가 출력된다.
 
+### 재부팅 후 D455 장치 고정 (권장: `serial_no` 기준)
+
+재부팅 시 `/dev/video*` 번호가 바뀌는 것은 정상입니다.  
+RealSense는 단일 카메라여도 여러 video 노드를 만들기 때문에, **장치 경로(`/dev/videoX`)를 고정하지 말고 시리얼 번호로 고정**하는 것이 가장 안전합니다.
+
+1) D455 시리얼 확인:
+
+```bash
+rs-enumerate-devices | grep -E "Name|Serial Number"
+```
+
+2) 실행 시 시리얼 지정:
+
+```bash
+ros2 launch realsense2_camera rs_launch.py \
+  serial_no:=_234222301994 \
+  enable_gyro:=true \
+  enable_accel:=true
+```
+
+주의:
+
+- `serial_no` 앞 `_`는 문자열로 안전하게 전달하기 위한 관례입니다.
+- 다중 카메라 환경이면 각 카메라마다 서로 다른 `serial_no`를 지정합니다.
+
 ### IMU 커널 활성화 (Jetson, 필요 시)
 
 아래 조건이면 커널 HID/IIO 옵션이 비활성화된 경우가 많습니다.
@@ -547,6 +572,79 @@ ls -l /dev/ttyMotor /dev/ttyUSB* /dev/ttyACM* 2>/dev/null
 "RightUseSeparatePort": True,
 "RightPort": "/dev/ttyUSB1",       # Right(B)
 "RightBaudrate": 57600,
+```
+
+### 재부팅 후 모터 USB 포트 고정 (udev 규칙)
+
+`/dev/ttyUSB0`, `/dev/ttyUSB1`은 재부팅/재연결 시 순서가 바뀔 수 있습니다.  
+아래처럼 **고정 심볼릭 링크**(`/dev/ttyMotorLeft`, `/dev/ttyMotorRight`)를 만들어 사용하면 안정적입니다.
+
+1) 자동화 스크립트 사용(권장):
+
+```bash
+cd <repo_root>
+
+# 연결된 후보 장치 식별자 확인
+./util/setup_motor_udev.sh --list
+
+# 실제 좌/우 장치 지정 후 udev 규칙 생성 + 적용
+./util/setup_motor_udev.sh --left /dev/ttyUSB0 --right /dev/ttyUSB1
+
+# 결과 확인
+ls -l /dev/ttyMotorLeft /dev/ttyMotorRight
+```
+
+> 스크립트는 `ID_SERIAL_SHORT`가 있으면 해당 값을 우선 사용하고, 없으면 `ID_PATH`로 자동 fallback 합니다.
+
+2) 수동 설정(필요 시) - 장치 식별자 확인:
+
+```bash
+for d in /dev/ttyUSB* /dev/ttyACM*; do
+  [ -e "$d" ] || continue
+  echo "=== $d ==="
+  udevadm info -q property -n "$d" | grep -E "ID_VENDOR_ID|ID_MODEL_ID|ID_SERIAL_SHORT|ID_PATH="
+done
+```
+
+3) udev 규칙 생성(값은 실제 장치 값으로 교체):
+
+```bash
+sudo tee /etc/udev/rules.d/99-robot-motor.rules >/dev/null <<'EOF'
+# Left motor adapter
+SUBSYSTEM=="tty", ENV{ID_VENDOR_ID}=="XXXX", ENV{ID_MODEL_ID}=="YYYY", ENV{ID_SERIAL_SHORT}=="LEFT_SERIAL", SYMLINK+="ttyMotorLeft", GROUP="dialout", MODE="0660"
+
+# Right motor adapter
+SUBSYSTEM=="tty", ENV{ID_VENDOR_ID}=="XXXX", ENV{ID_MODEL_ID}=="YYYY", ENV{ID_SERIAL_SHORT}=="RIGHT_SERIAL", SYMLINK+="ttyMotorRight", GROUP="dialout", MODE="0660"
+EOF
+```
+
+`ID_SERIAL_SHORT`가 없는 어댑터는 `ID_PATH` 기준으로 규칙을 작성합니다:
+
+```bash
+SUBSYSTEM=="tty", ENV{ID_PATH}=="platform-3610000.usb-usb-0:1.3:1.0", SYMLINK+="ttyMotorLeft", GROUP="dialout", MODE="0660"
+SUBSYSTEM=="tty", ENV{ID_PATH}=="platform-3610000.usb-usb-0:1.4:1.0", SYMLINK+="ttyMotorRight", GROUP="dialout", MODE="0660"
+```
+
+4) 규칙 적용:
+
+```bash
+sudo udevadm control --reload-rules
+sudo udevadm trigger
+# 또는 USB 재연결
+```
+
+5) 링크 확인:
+
+```bash
+ls -l /dev/ttyMotorLeft /dev/ttyMotorRight
+```
+
+6) `md_controller` 파라미터 고정:
+
+```python
+"Port": "/dev/ttyMotorLeft",
+"RightUseSeparatePort": True,
+"RightPort": "/dev/ttyMotorRight",
 ```
 
 ### 1단계: 모터 드라이버 단독 bring-up
