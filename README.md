@@ -33,6 +33,7 @@
 - [Nav2 자율주행 모드](docs/nav2-autonomous-mode.md)
 - [트러블슈팅 모음](docs/troubleshooting.md)
 - [모터 USB 포트 고정 스크립트](util/setup_motor_udev.sh)
+- [Isaac 컨테이너 부트스트랩 스크립트](util/bootstrap_isaac_container.sh)
 
 ---
 
@@ -439,6 +440,30 @@ cd ${ISAAC_ROS_WS}
 
 > 최초 1회는 Docker 이미지 빌드로 시간이 오래 걸릴 수 있습니다.
 > `docker` 그룹 권한 이슈가 나면 3번 섹션의 Docker 설정을 먼저 완료합니다.
+
+### 재접속 시 빠른 복구 루틴 (권장)
+
+Jetson 재부팅/컨테이너 재생성 후 매번 긴 명령을 다시 입력하기 번거롭다면 아래만 실행합니다.
+
+호스트:
+
+```bash
+cd ~/workspaces/isaac_ros-dev
+./src/isaac_ros_common/scripts/run_dev.sh
+```
+
+컨테이너 내부:
+
+```bash
+source /workspaces/isaac_ros-dev/util/bootstrap_isaac_container.sh
+```
+
+`bootstrap_isaac_container.sh`가 수행하는 작업:
+
+- ROS 기본 환경 source
+- 문제를 일으키는 `yarn` apt 저장소 제거
+- 매핑/시각화 필수 패키지 설치(`depthimage_to_laserscan`, `slam_toolbox`, `nav2_map_server`, `foxglove_bridge`)
+- 존재 시 워크스페이스 overlay(`install/setup.bash`) 자동 source
 
 ### 3) 컨테이너 의존성 동기화 + 빌드
 

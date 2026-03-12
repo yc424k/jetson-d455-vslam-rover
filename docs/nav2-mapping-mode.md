@@ -17,6 +17,12 @@
 - RealSense/SLAM/Foxglove Bridge: Docker 컨테이너(`~/workspaces/isaac_ros-dev`)
 - 모터 구동/teleop: Host(`~/ros2_ws`)
 
+빠른 시작(컨테이너 내부):
+
+```bash
+source /workspaces/isaac_ros-dev/util/bootstrap_isaac_container.sh
+```
+
 ## 사전 설치 (컨테이너 내부 1회)
 
 ```bash
