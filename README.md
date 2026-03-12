@@ -440,18 +440,43 @@ cd ${ISAAC_ROS_WS}
 > 최초 1회는 Docker 이미지 빌드로 시간이 오래 걸릴 수 있습니다.
 > `docker` 그룹 권한 이슈가 나면 3번 섹션의 Docker 설정을 먼저 완료합니다.
 
-### 3) 컨테이너 내부에서 빌드
+### 3) 컨테이너 의존성 동기화 + 빌드
 
 ```bash
 cd /workspaces/isaac_ros-dev
 source /opt/ros/humble/setup.bash
+
+# apt update를 막는 불필요 저장소(yarn) 제거
+sudo rm -f /etc/apt/sources.list.d/yarn.list
+
+# apt 인덱스 강제 새로고침 (404/Not Found 예방)
+sudo apt clean
+sudo rm -rf /var/lib/apt/lists/*
+sudo apt update
+
 rosdep update
 rosdep install --from-paths src --ignore-src -r -y
+
 colcon build --symlink-install --packages-up-to realsense2_camera realsense2_description isaac_ros_visual_slam
 source install/setup.bash
 
 ros2 pkg list | grep -E "^realsense2_camera$|^realsense2_camera_msgs$|^realsense2_description$|^isaac_ros_visual_slam$"
 ```
+
+`rosdep install`에서 `ros-humble-librealsense2`, `ros-humble-launch-pytest`, `ros-humble-isaac-ros-*`가 404로 실패하면 아래 순서로 재시도합니다.
+
+```bash
+cd /workspaces/isaac_ros-dev
+source /opt/ros/humble/setup.bash
+
+sudo rm -rf /var/lib/apt/lists/*
+sudo apt update
+rosdep update
+rosdep install --from-paths src --ignore-src -r -y
+```
+
+> 위 404는 ROS/Isaac apt 저장소 동기화 시점 이슈로 발생할 수 있습니다.
+> 대부분은 `apt lists` 초기화 후 재시도로 해결됩니다.
 
 ### 4) Visual SLAM 실행 (RealSense + IMU)
 

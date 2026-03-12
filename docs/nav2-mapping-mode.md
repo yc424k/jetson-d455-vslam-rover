@@ -20,6 +20,11 @@
 ## 사전 설치 (컨테이너 내부 1회)
 
 ```bash
+# apt update를 막는 불필요 저장소(yarn) 제거
+sudo rm -f /etc/apt/sources.list.d/yarn.list
+sudo apt clean
+sudo rm -rf /var/lib/apt/lists/*
+
 sudo apt update
 sudo apt install -y \
   ros-humble-depthimage-to-laserscan \
