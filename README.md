@@ -40,7 +40,7 @@
 - **Jetson Orin Nano (JetPack 6.2.2)**
   - ROS 2 Humble
   - RealSense ROS 드라이버
-  - Isaac ROS Visual SLAM
+  - Isaac ROS Visual SLAM (Docker 컨테이너에서 실행 권장)
   - 모터 제어 노드 (`md_motor_driver_ros2`)
 - **Intel RealSense D455**
   - Stereo Depth + RGB + IMU
@@ -396,7 +396,18 @@ ros2 topic list | grep -E "/camera/.*/(gyro|accel|imu)"
 <a id="sec-7"></a>
 ## 7) Isaac ROS Visual SLAM 적용 순서
 
-아래는 **Isaac ROS 컨테이너 기반(권장)** 명령 순서입니다.
+아래는 **Isaac ROS 컨테이너 기반(권장/기본)** 명령 순서입니다.
+
+### 왜 Isaac ROS는 Docker에서 실행하나? (중요)
+
+이 문서는 **Isaac ROS를 Docker에서 실행하는 것을 기본 운영 방식**으로 가정합니다.
+
+이유:
+
+- **환경 재현성**: JetPack/ROS/Isaac ROS 의존성 버전을 컨테이너 이미지로 고정해, 다음날 재실행 시에도 같은 환경을 유지하기 쉽습니다.
+- **패키지 충돌 방지**: 호스트 `~/ros2_ws`와 Isaac 워크스페이스가 섞이면서 발생하는 `package not found`, schema/service 로딩 오류를 줄일 수 있습니다.
+- **GPU/NITROS 실행 일관성**: `run_dev.sh`가 NVIDIA 런타임과 Isaac ROS 실행 환경을 표준화해 Visual SLAM 실행 안정성이 높습니다.
+- **역할 분리 용이**: Isaac ROS(SLAM/카메라)는 컨테이너, 모터 드라이버(시리얼 제어)는 호스트로 분리하면 디버깅이 단순해집니다.
 
 ### 1) Isaac ROS 워크스페이스 준비 (Jetson)
 

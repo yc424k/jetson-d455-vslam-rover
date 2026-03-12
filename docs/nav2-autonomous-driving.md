@@ -15,6 +15,7 @@
 - 2D 정적 맵 파일 준비 (`<map>.yaml`, `<map>.pgm`)
 
 > Nav2 글로벌 경로 계획은 2D occupancy map을 사용하므로, 맵 파일이 없으면 완전 자율주행을 시작할 수 없습니다.
+> 이 문서는 기본적으로 **RealSense/Isaac ROS는 Docker(`~/workspaces/isaac_ros-dev`)**, **모터/Nav2는 Host(`~/ros2_ws`)** 구성을 기준으로 합니다.
 
 ### 1) 맵 파일 생성 (`my_map.yaml`, `my_map.pgm`)
 
@@ -33,10 +34,26 @@ mkdir -p ~/maps
 
 2. RealSense 실행:
 
+Docker 권장(기본):
+
 ```bash
+cd ~/workspaces/isaac_ros-dev
+./src/isaac_ros_common/scripts/run_dev.sh
+source /workspaces/isaac_ros-dev/install/setup.bash
+ros2 launch realsense2_camera rs_launch.py enable_gyro:=true enable_accel:=true
+```
+
+Host에서 직접 실행(선택):
+
+```bash
+# 아래가 먼저 준비되어 있어야 함
+# - ~/ros2_ws/src/realsense-ros 존재
+# - ~/ros2_ws 에서 colcon build 완료
 source ~/ros2_ws/install/setup.bash
 ros2 launch realsense2_camera rs_launch.py enable_gyro:=true enable_accel:=true
 ```
+
+> `Package 'realsense2_camera' not found`가 뜨면 Host `~/ros2_ws`에는 RealSense 패키지가 없는 상태입니다. Docker 경로로 실행하거나 Host에 `realsense-ros`를 빌드해야 합니다.
 
 3. Depth -> LaserScan 변환(`/scan` 생성):
 
@@ -80,6 +97,7 @@ ros2 run nav2_map_server map_saver_cli -f ~/maps/my_map
 #### tmux 3분할 실행 예시 (맵 생성용)
 
 아래 예시는 Jetson에서 `tmux` 한 세션에 매핑 필수 노드 3개를 동시에 올리는 방법입니다.
+아래 예시는 **Host에 `realsense2_camera`가 설치/빌드된 경우**에만 그대로 사용 가능합니다.
 
 ```bash
 # 1) tmux 세션 생성 (detached)
