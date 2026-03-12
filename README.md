@@ -598,6 +598,48 @@ ros2 launch foxglove_bridge foxglove_bridge_launch.xml port:=8765 address:=0.0.0
 
 - [트러블슈팅 모음](docs/troubleshooting.md)
 
+### 최근 해결된 이슈 요약 (실사용 기준)
+
+| 증상 | 핵심 원인 | 해결 |
+|---|---|---|
+| `LFS files are missing...` (`run_dev.sh`) | Git LFS 객체 누락 | `git-lfs` 설치 후 `isaac_ros_common`, `isaac_ros_visual_slam`에서 `git lfs pull` |
+| `groups: 'ml406': no such user` + docker 그룹 경고 (컨테이너 내부) | `run_dev.sh`를 컨테이너 안에서 다시 실행 | `run_dev.sh`는 **호스트에서만** 실행, 컨테이너 내부에서는 `source`만 수행 |
+| `Package 'realsense2_camera' not found` (host `~/ros2_ws`) | RealSense 패키지가 host 워크스페이스에 없음(컨테이너에만 존재) | RealSense/Isaac ROS는 Docker에서 실행하거나, host에 `realsense-ros` 별도 빌드 |
+| `Package 'depthimage_to_laserscan' not found` (컨테이너) | 해당 ROS 패키지 미설치 | 컨테이너 내부에서 `ros-humble-depthimage-to-laserscan` 설치 |
+| `apt update` 실패 + `NO_PUBKEY 62D54FD4003F6525` | Yarn 저장소 서명키 문제 | `sudo rm -f /etc/apt/sources.list.d/yarn.list` 후 `sudo apt update` |
+| `xioctl(VIDIOC_QBUF) ... No such device` | D455 USB 연결 끊김/리셋 또는 중복 점유 | 케이블/포트 점검, 카메라 노드 단일 실행 유지, 노드 재기동 |
+
+### Docker 컨테이너 내부 추가 설치 패키지 정리
+
+아래는 실제 bring-up 과정에서 컨테이너 안(`admin@ubuntu:/workspaces/isaac_ros-dev`)에 추가 설치한 패키지입니다.
+
+```bash
+ros-humble-depthimage-to-laserscan
+ros-humble-slam-toolbox
+ros-humble-nav2-map-server
+```
+
+필요 시(컨테이너 내부) 재설치:
+
+```bash
+sudo apt update
+sudo apt install -y \
+  ros-humble-depthimage-to-laserscan \
+  ros-humble-slam-toolbox \
+  ros-humble-nav2-map-server
+```
+
+설치 확인:
+
+```bash
+ros2 pkg list | grep -E "depthimage_to_laserscan|slam_toolbox|nav2_map_server"
+```
+
+주의:
+
+- 컨테이너를 새로 생성하면(이미지/컨테이너 교체) 수동 설치 패키지가 사라질 수 있습니다.
+- 재현성을 위해 필요한 패키지는 문서에 남기고, 동일 명령으로 다시 설치 가능한 형태로 관리합니다.
+
 <a id="sec-14"></a>
 ## 14) 운영 원칙 요약
 

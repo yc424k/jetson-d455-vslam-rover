@@ -122,6 +122,53 @@ id -nG | grep docker
 docker ps
 ```
 
+### `LFS files are missing. Please re-clone repos after installing git-lfs.` 에러
+
+증상 예시:
+
+- `./src/isaac_ros_common/scripts/run_dev.sh` 실행 직후 아래 메시지 출력
+- `LFS files are missing. Please re-clone repos after installing git-lfs.`
+- `isaac_ros_test_cmake/resources/dummy_bag/...` 같은 파일 경로가 함께 출력됨
+
+원인:
+
+- 이 에러는 Docker 실행 실패가 아니라, `run_dev.sh`의 **사전 검사(pre-check)** 단계에서
+  Git LFS 객체가 누락되어 중단된 상태입니다.
+- 즉 컨테이너에 들어가지도 못한 상태이며, 소스 저장소가 LFS 포인터 파일만 가진 경우에 발생합니다.
+
+해결:
+
+```bash
+sudo apt update
+sudo apt install -y git-lfs
+git lfs install
+
+cd ~/workspaces/isaac_ros-dev/src/isaac_ros_common
+git lfs pull
+
+cd ~/workspaces/isaac_ros-dev/src/isaac_ros_visual_slam
+git lfs pull
+
+cd ~/workspaces/isaac_ros-dev
+./src/isaac_ros_common/scripts/run_dev.sh
+```
+
+여전히 동일하면(권장: 재클론):
+
+```bash
+cd ~/workspaces
+mv isaac_ros-dev isaac_ros-dev.backup.$(date +%F-%H%M)
+
+mkdir -p isaac_ros-dev/src
+cd isaac_ros-dev/src
+git clone -b release-3.2 https://github.com/NVIDIA-ISAAC-ROS/isaac_ros_common.git
+git clone -b release-3.2 https://github.com/NVIDIA-ISAAC-ROS/isaac_ros_visual_slam.git
+git clone https://github.com/IntelRealSense/realsense-ros.git
+
+cd ~/workspaces/isaac_ros-dev
+./src/isaac_ros_common/scripts/run_dev.sh
+```
+
 ### `Unable to open port` / `PortNotOpenedException Serial::write failed` (md_controller)
 
 증상 예시:
