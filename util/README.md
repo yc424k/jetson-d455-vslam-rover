@@ -46,6 +46,7 @@ source /workspaces/isaac_ros-dev/util/bootstrap_isaac_container.sh
 자동 점검 패키지:
 
 ```bash
+ros-humble-librealsense2
 ros-humble-depthimage-to-laserscan
 ros-humble-slam-toolbox
 ros-humble-nav2-map-server

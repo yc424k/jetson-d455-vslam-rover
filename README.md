@@ -472,7 +472,7 @@ cd ~/workspaces/isaac_ros-dev
 
 - ROS 기본 환경 source
 - 문제를 일으키는 `yarn` apt 저장소 제거
-- 매핑/시각화 필수 패키지 설치(`depthimage_to_laserscan`, `slam_toolbox`, `nav2_map_server`, `foxglove_bridge`)
+- 런타임/매핑/시각화 필수 패키지 설치(`librealsense2`, `depthimage_to_laserscan`, `slam_toolbox`, `nav2_map_server`, `foxglove_bridge`)
 - 존재 시 워크스페이스 overlay(`install/setup.bash`) 자동 source
 
 ### 3) 컨테이너 의존성 동기화 + 빌드
