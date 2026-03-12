@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-set -euo pipefail
 
 # Run this script inside isaac_ros_dev container:
 #   source /workspaces/isaac_ros-dev/util/bootstrap_isaac_container.sh
@@ -14,11 +13,18 @@ ROS_SETUP="/opt/ros/humble/setup.bash"
 WS_SETUP="${WORKSPACE_DIR}/install/setup.bash"
 YARN_LIST="/etc/apt/sources.list.d/yarn.list"
 
+# Preserve caller shell options because this script is intended to be sourced.
+__BOOTSTRAP_SAVED_OPTS="$(set +o)"
+set -eo pipefail
+
 if [[ -f "${ROS_SETUP}" ]]; then
+  # ROS setup scripts can reference unset variables; avoid nounset failures.
+  set +u
   # shellcheck disable=SC1090
   source "${ROS_SETUP}"
 else
   echo "[ERROR] ROS setup not found: ${ROS_SETUP}"
+  eval "${__BOOTSTRAP_SAVED_OPTS}"
   return 1 2>/dev/null || exit 1
 fi
 
@@ -63,3 +69,4 @@ else
 fi
 
 echo "[DONE] Container bootstrap complete."
+eval "${__BOOTSTRAP_SAVED_OPTS}"
