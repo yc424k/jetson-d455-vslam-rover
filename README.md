@@ -28,7 +28,9 @@
 ## 상세 문서
 
 - [모터 드라이버 연동 상세](docs/motor-driver-integration.md)
-- [Nav2 기반 자율주행](docs/nav2-autonomous-driving.md)
+- [Nav2 운영 가이드 (모드 분리)](docs/nav2-autonomous-driving.md)
+- [Nav2 준비 - 맵 생성 모드](docs/nav2-mapping-mode.md)
+- [Nav2 자율주행 모드](docs/nav2-autonomous-mode.md)
 - [트러블슈팅 모음](docs/troubleshooting.md)
 - [모터 USB 포트 고정 스크립트](util/setup_motor_udev.sh)
 
@@ -653,4 +655,6 @@ ros2 pkg list | grep -E "depthimage_to_laserscan|slam_toolbox|nav2_map_server"
 
 상세 문서:
 
-- [Nav2 기반 자율주행 가이드](docs/nav2-autonomous-driving.md)
+- [Nav2 운영 가이드 (모드 분리)](docs/nav2-autonomous-driving.md)
+- [Nav2 준비 - 맵 생성 모드](docs/nav2-mapping-mode.md)
+- [Nav2 자율주행 모드](docs/nav2-autonomous-mode.md)
