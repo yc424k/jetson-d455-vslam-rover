@@ -458,6 +458,16 @@ cd ~/workspaces/isaac_ros-dev
 source /workspaces/isaac_ros-dev/util/bootstrap_isaac_container.sh
 ```
 
+`/workspaces/isaac_ros-dev`가 비정상 마운트되어 `util/bootstrap_isaac_container.sh`가 안 보일 때:
+
+```bash
+# host
+docker rm -f isaac_ros_dev-aarch64-container 2>/dev/null || true
+
+cd ~/workspaces/isaac_ros-dev
+./src/isaac_ros_common/scripts/run_dev.sh -d ~/workspaces/isaac_ros-dev
+```
+
 `bootstrap_isaac_container.sh`가 수행하는 작업:
 
 - ROS 기본 환경 source

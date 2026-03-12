@@ -27,6 +27,22 @@
 source /workspaces/isaac_ros-dev/util/bootstrap_isaac_container.sh
 ```
 
+파일이 안 보일 때(마운트 경로 꼬임) 복구:
+
+```bash
+# host
+docker rm -f isaac_ros_dev-aarch64-container 2>/dev/null || true
+
+cd ~/workspaces/isaac_ros-dev
+./src/isaac_ros_common/scripts/run_dev.sh -d ~/workspaces/isaac_ros-dev
+```
+
+그 다음 컨테이너에서 다시:
+
+```bash
+source /workspaces/isaac_ros-dev/util/bootstrap_isaac_container.sh
+```
+
 자동 점검 패키지:
 
 ```bash
