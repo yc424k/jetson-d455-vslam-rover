@@ -496,6 +496,12 @@ sudo rm -f /etc/apt/sources.list.d/yarn.list
 sudo apt clean
 sudo rm -rf /var/lib/apt/lists/*
 sudo apt update
+sudo apt install -y \
+  ros-humble-librealsense2 \
+  ros-humble-depthimage-to-laserscan \
+  ros-humble-slam-toolbox \
+  ros-humble-nav2-map-server \
+  ros-humble-foxglove-bridge
 
 rosdep update
 rosdep install --from-paths src --ignore-src -r -y
