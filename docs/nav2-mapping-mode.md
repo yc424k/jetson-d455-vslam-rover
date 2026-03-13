@@ -25,6 +25,9 @@ source /workspaces/isaac_ros-dev/util/bootstrap_isaac_container.sh
 
 ## 사전 설치 (컨테이너 내부 1회)
 
+> `source /workspaces/isaac_ros-dev/util/bootstrap_isaac_container.sh`를 실행했다면
+> 아래 설치는 대부분 자동으로 처리되므로 생략할 수 있습니다.
+
 ```bash
 # apt update를 막는 불필요 저장소(yarn) 제거
 sudo rm -f /etc/apt/sources.list.d/yarn.list
@@ -33,9 +36,11 @@ sudo rm -rf /var/lib/apt/lists/*
 
 sudo apt update
 sudo apt install -y \
+  ros-humble-librealsense2 \
   ros-humble-depthimage-to-laserscan \
   ros-humble-slam-toolbox \
-  ros-humble-nav2-map-server
+  ros-humble-nav2-map-server \
+  ros-humble-foxglove-bridge
 ```
 
 ## 실행 순서
