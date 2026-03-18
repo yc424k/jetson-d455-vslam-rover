@@ -30,6 +30,7 @@
 - [모터 드라이버 연동 상세](docs/motor-driver-integration.md)
 - [Depth 카메라 단독 점검 (Foxglove)](docs/depth-camera-validation.md)
 - [Nav2 운영 가이드 (모드 분리)](docs/nav2-autonomous-driving.md)
+- [Nav2 Host Native 모드 (Docker 없이)](docs/nav2-host-native-mode.md)
 - [Nav2 준비 - 맵 생성 모드](docs/nav2-mapping-mode.md)
 - [Nav2 자율주행 모드](docs/nav2-autonomous-mode.md)
 - [트러블슈팅 모음](docs/troubleshooting.md)
@@ -730,6 +731,7 @@ ros2 pkg list | grep -E "depthimage_to_laserscan|slam_toolbox|nav2_map_server"
 상세 문서:
 
 - [Nav2 운영 가이드 (모드 분리)](docs/nav2-autonomous-driving.md)
+- [Nav2 Host Native 모드 (Docker 없이)](docs/nav2-host-native-mode.md)
 - [Nav2 준비 - 맵 생성 모드](docs/nav2-mapping-mode.md)
 - [Nav2 자율주행 모드](docs/nav2-autonomous-mode.md)
 

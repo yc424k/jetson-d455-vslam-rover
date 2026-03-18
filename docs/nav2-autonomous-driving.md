@@ -1,6 +1,6 @@
 # Nav2 운영 가이드 (모드 분리)
 
-기존 Nav2 절차를 혼동 없이 쓰기 위해 문서를 2개 모드로 분리했습니다.
+기존 Nav2 절차를 혼동 없이 쓰기 위해 문서를 모드별로 분리했습니다.
 
 ## 먼저 이해할 점
 
@@ -16,6 +16,11 @@
 
 - 목적: 저장된 맵 파일을 읽어 Nav2로 목표점 주행
 - 문서: [Nav2 자율주행 모드](nav2-autonomous-mode.md)
+
+## 3) Host Native 모드 (Docker 없이)
+
+- 목적: Jetson Host(`~/ros2_ws`)만으로 맵 생성 + 자율주행 실행
+- 문서: [Nav2 Host Native 운영 가이드](nav2-host-native-mode.md)
 
 ## 권장 순서
 
