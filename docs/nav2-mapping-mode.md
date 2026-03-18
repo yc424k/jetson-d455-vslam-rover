@@ -52,7 +52,12 @@ cd ~/workspaces/isaac_ros-dev
 ./src/isaac_ros_common/scripts/run_dev.sh
 source /opt/ros/humble/setup.bash
 source /workspaces/isaac_ros-dev/install/setup.bash
-ros2 launch realsense2_camera rs_launch.py enable_gyro:=true enable_accel:=true
+ros2 launch realsense2_camera rs_launch.py \
+  enable_color:=false \
+  enable_gyro:=true \
+  enable_accel:=true \
+  depth_module.depth_profile:=640x360x10 \
+  unite_imu_method:=2
 ```
 
 ### 터미널 B: Depth -> LaserScan (`/scan`)
@@ -79,9 +84,16 @@ source /opt/ros/humble/setup.bash
 source /workspaces/isaac_ros-dev/install/setup.bash
 ros2 run slam_toolbox async_slam_toolbox_node --ros-args \
   -r scan:=/scan \
-  -p base_frame:=camera_depth_frame \
+  -p base_frame:=base_link \
   -p odom_frame:=odom \
-  -p map_frame:=map
+  -p map_frame:=map \
+  -p throttle_scans:=5 \
+  -p minimum_time_interval:=0.25 \
+  -p scan_queue_size:=1000 \
+  -p transform_timeout:=1.0 \
+  -p tf_buffer_duration:=120.0 \
+  -p minimum_laser_range:=0.25 \
+  -p max_laser_range:=4.0
 ```
 
 ### 터미널 D: Foxglove Bridge (선택)
@@ -135,3 +147,25 @@ ros2 run nav2_map_server map_saver_cli -f ~/maps/my_map
 
 - 맵 생성 모드에서는 `isaac_ros_visual_slam_realsense.launch.py`를 **동시에 실행하지 않습니다**.
 - 이유: RealSense 장치 중복 점유로 `No such device`류 에러가 발생할 수 있습니다.
+- 줄바꿈용 `\` 뒤에 공백이 들어가면 인자 파싱이 깨질 수 있습니다.
+  - 잘못된 예: `-p tf_buffer_duration:=120.0 \ `
+
+## 자주 발생하는 로그와 대응
+
+아래 로그가 반복되면 매핑 품질이 떨어질 수 있습니다.
+
+- `discarding message because the queue is full`
+- `the timestamp on the message is earlier than all the data in the transform cache`
+
+확인 명령:
+
+```bash
+ros2 topic hz /scan
+ros2 run tf2_ros tf2_echo odom base_link
+ros2 topic echo /map --once --qos-durability transient_local
+```
+
+점검 기준:
+
+- `/scan`은 대체로 8~15Hz면 충분합니다.
+- `odom -> base_link` TF가 안정적으로 이어져야 합니다.

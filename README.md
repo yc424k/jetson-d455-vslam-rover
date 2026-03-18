@@ -732,3 +732,64 @@ ros2 pkg list | grep -E "depthimage_to_laserscan|slam_toolbox|nav2_map_server"
 - [Nav2 운영 가이드 (모드 분리)](docs/nav2-autonomous-driving.md)
 - [Nav2 준비 - 맵 생성 모드](docs/nav2-mapping-mode.md)
 - [Nav2 자율주행 모드](docs/nav2-autonomous-mode.md)
+
+### 맵 생성 모드 실행 팁 (slam_toolbox 드롭 메시지 대응)
+
+`slam_toolbox` 실행 시 아래 로그가 반복되면 매핑 품질이 떨어질 수 있습니다.
+
+- `discarding message because the queue is full`
+- `the timestamp on the message is earlier than all the data in the transform cache`
+
+아래 순서로 실행하면 Jetson에서 드롭 빈도를 줄이기 쉽습니다.
+
+```bash
+# 1) md_controller (Host)
+ros2 launch md_controller md_controller.launch.py use_rviz:=False
+```
+
+```bash
+# 2) RealSense (Docker) - 부담 줄이기
+ros2 launch realsense2_camera rs_launch.py \
+  enable_color:=false enable_gyro:=true enable_accel:=true \
+  depth_module.depth_profile:=640x360x10 \
+  unite_imu_method:=2
+```
+
+```bash
+# 3) depth -> scan (Docker)
+ros2 run depthimage_to_laserscan depthimage_to_laserscan_node --ros-args \
+  -r depth:=/camera/camera/depth/image_rect_raw \
+  -r depth_camera_info:=/camera/camera/depth/camera_info \
+  -r scan:=/scan \
+  -p range_min:=0.25 \
+  -p range_max:=4.0
+```
+
+```bash
+# 4) slam_toolbox (Docker)
+ros2 run slam_toolbox async_slam_toolbox_node --ros-args \
+  -r scan:=/scan \
+  -p base_frame:=base_link \
+  -p odom_frame:=odom \
+  -p map_frame:=map \
+  -p throttle_scans:=5 \
+  -p minimum_time_interval:=0.25 \
+  -p scan_queue_size:=1000 \
+  -p transform_timeout:=1.0 \
+  -p tf_buffer_duration:=120.0 \
+  -p minimum_laser_range:=0.25 \
+  -p max_laser_range:=4.0
+```
+
+확인 명령:
+
+```bash
+ros2 topic hz /scan
+ros2 run tf2_ros tf2_echo odom base_link
+ros2 topic echo /map --once --qos-durability transient_local
+```
+
+주의:
+
+- 줄바꿈용 `\` 뒤에 공백이 들어가면 인자 파싱이 깨질 수 있습니다.  
+  예: `-p tf_buffer_duration:=120.0 \ ` (잘못된 예)
