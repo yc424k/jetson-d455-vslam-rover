@@ -748,9 +748,9 @@ ros2 launch md_controller md_controller.launch.py use_rviz:=False
 ```
 
 ```bash
-# 2) RealSense (Docker) - 부담 줄이기
+# 2) RealSense (Docker) - 원격 화면 확인 포함
 ros2 launch realsense2_camera rs_launch.py \
-  enable_color:=false enable_gyro:=true enable_accel:=true \
+  enable_color:=true enable_gyro:=true enable_accel:=true \
   depth_module.depth_profile:=640x360x10 \
   unite_imu_method:=2
 ```
@@ -762,7 +762,7 @@ ros2 run depthimage_to_laserscan depthimage_to_laserscan_node --ros-args \
   -r depth_camera_info:=/camera/camera/depth/camera_info \
   -r scan:=/scan \
   -p range_min:=0.25 \
-  -p range_max:=4.0
+  -p range_max:=3.5   # 권장: 3.0~3.5
 ```
 
 ```bash

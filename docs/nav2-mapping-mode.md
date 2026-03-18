@@ -53,7 +53,7 @@ cd ~/workspaces/isaac_ros-dev
 source /opt/ros/humble/setup.bash
 source /workspaces/isaac_ros-dev/install/setup.bash
 ros2 launch realsense2_camera rs_launch.py \
-  enable_color:=false \
+  enable_color:=true \
   enable_gyro:=true \
   enable_accel:=true \
   depth_module.depth_profile:=640x360x10 \
