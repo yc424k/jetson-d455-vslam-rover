@@ -56,6 +56,7 @@ ros2 launch realsense2_camera rs_launch.py \
   enable_color:=true \
   enable_gyro:=true \
   enable_accel:=true \
+  rgb_camera.color_profile:=1280x720x15 \
   depth_module.depth_profile:=640x360x10 \
   unite_imu_method:=2
 ```
