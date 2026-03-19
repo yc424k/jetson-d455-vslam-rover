@@ -30,7 +30,7 @@ fi
 
 REQUIRED_PKGS=(
   ros-humble-librealsense2
-  ros-humble-depthimage-to-laserscan
+  ros-humble-rplidar-ros
   ros-humble-slam-toolbox
   ros-humble-nav2-map-server
   ros-humble-foxglove-bridge

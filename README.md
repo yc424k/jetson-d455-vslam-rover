@@ -481,7 +481,7 @@ cd ~/workspaces/isaac_ros-dev
 
 - ROS 기본 환경 source
 - 문제를 일으키는 `yarn` apt 저장소 제거
-- 런타임/매핑/시각화 필수 패키지 설치(`librealsense2`, `depthimage_to_laserscan`, `slam_toolbox`, `nav2_map_server`, `foxglove_bridge`)
+- 런타임/매핑/시각화 필수 패키지 설치(`librealsense2`, `rplidar_ros`, `slam_toolbox`, `nav2_map_server`, `foxglove_bridge`)
 - 존재 시 워크스페이스 overlay(`install/setup.bash`) 자동 source
 
 ### 3) 컨테이너 의존성 동기화 + 빌드
@@ -499,7 +499,7 @@ sudo rm -rf /var/lib/apt/lists/*
 sudo apt update
 sudo apt install -y \
   ros-humble-librealsense2 \
-  ros-humble-depthimage-to-laserscan \
+  ros-humble-rplidar-ros \
   ros-humble-slam-toolbox \
   ros-humble-nav2-map-server \
   ros-humble-foxglove-bridge
@@ -682,7 +682,7 @@ ros2 launch foxglove_bridge foxglove_bridge_launch.xml port:=8765 address:=0.0.0
 | `LFS files are missing...` (`run_dev.sh`) | Git LFS 객체 누락 | `git-lfs` 설치 후 `isaac_ros_common`, `isaac_ros_visual_slam`에서 `git lfs pull` |
 | `groups: 'ml406': no such user` + docker 그룹 경고 (컨테이너 내부) | `run_dev.sh`를 컨테이너 안에서 다시 실행 | `run_dev.sh`는 **호스트에서만** 실행, 컨테이너 내부에서는 `source`만 수행 |
 | `Package 'realsense2_camera' not found` (host `~/ros2_ws`) | RealSense 패키지가 host 워크스페이스에 없음(컨테이너에만 존재) | RealSense/Isaac ROS는 Docker에서 실행하거나, host에 `realsense-ros` 별도 빌드 |
-| `Package 'depthimage_to_laserscan' not found` (컨테이너) | 해당 ROS 패키지 미설치 | 컨테이너 내부에서 `ros-humble-depthimage-to-laserscan` 설치 |
+| `Package 'rplidar_ros' not found` (컨테이너) | 해당 ROS 패키지 미설치 | 컨테이너 내부에서 `ros-humble-rplidar-ros` 설치 |
 | `apt update` 실패 + `NO_PUBKEY 62D54FD4003F6525` | Yarn 저장소 서명키 문제 | `sudo rm -f /etc/apt/sources.list.d/yarn.list` 후 `sudo apt update` |
 | `xioctl(VIDIOC_QBUF) ... No such device` | D455 USB 연결 끊김/리셋 또는 중복 점유 | 케이블/포트 점검, 카메라 노드 단일 실행 유지, 노드 재기동 |
 
@@ -691,7 +691,7 @@ ros2 launch foxglove_bridge foxglove_bridge_launch.xml port:=8765 address:=0.0.0
 아래는 실제 bring-up 과정에서 컨테이너 안(`admin@ubuntu:/workspaces/isaac_ros-dev`)에 추가 설치한 패키지입니다.
 
 ```bash
-ros-humble-depthimage-to-laserscan
+ros-humble-rplidar-ros
 ros-humble-slam-toolbox
 ros-humble-nav2-map-server
 ```
@@ -701,7 +701,7 @@ ros-humble-nav2-map-server
 ```bash
 sudo apt update
 sudo apt install -y \
-  ros-humble-depthimage-to-laserscan \
+  ros-humble-rplidar-ros \
   ros-humble-slam-toolbox \
   ros-humble-nav2-map-server
 ```
@@ -709,7 +709,7 @@ sudo apt install -y \
 설치 확인:
 
 ```bash
-ros2 pkg list | grep -E "depthimage_to_laserscan|slam_toolbox|nav2_map_server"
+ros2 pkg list | grep -E "rplidar_ros|slam_toolbox|nav2_map_server"
 ```
 
 주의:
@@ -750,22 +750,22 @@ ros2 launch md_controller md_controller.launch.py use_rviz:=False
 ```
 
 ```bash
-# 2) RealSense (Docker) - 원격 화면 확인 포함
-ros2 launch realsense2_camera rs_launch.py \
-  enable_color:=true enable_gyro:=true enable_accel:=true \
-  rgb_camera.color_profile:=1280x720x15 \
-  depth_module.depth_profile:=640x360x10 \
-  unite_imu_method:=2
+# 2) RPLIDAR S3M1 (Docker)
+ros2 run rplidar_ros rplidar_node --ros-args \
+  -p channel_type:=serial \
+  -p serial_port:=/dev/ttyUSB0 \
+  -p serial_baudrate:=1000000 \
+  -p frame_id:=laser \
+  -p inverted:=false \
+  -p angle_compensate:=true \
+  -p scan_mode:=DenseBoost \
+  -r scan:=/scan
 ```
 
 ```bash
-# 3) depth -> scan (Docker)
-ros2 run depthimage_to_laserscan depthimage_to_laserscan_node --ros-args \
-  -r depth:=/camera/camera/depth/image_rect_raw \
-  -r depth_camera_info:=/camera/camera/depth/camera_info \
-  -r scan:=/scan \
-  -p range_min:=0.25 \
-  -p range_max:=3.5   # 권장: 3.0~3.5
+# 3) base_link -> laser TF (필요 시)
+ros2 run tf2_ros static_transform_publisher \
+  0.10 0.0 0.18 0.0 0.0 0.0 base_link laser
 ```
 
 ```bash
@@ -775,13 +775,13 @@ ros2 run slam_toolbox async_slam_toolbox_node --ros-args \
   -p base_frame:=base_link \
   -p odom_frame:=odom \
   -p map_frame:=map \
-  -p throttle_scans:=5 \
-  -p minimum_time_interval:=0.25 \
-  -p scan_queue_size:=1000 \
+  -p throttle_scans:=2 \
+  -p minimum_time_interval:=0.1 \
+  -p scan_queue_size:=2000 \
   -p transform_timeout:=1.0 \
   -p tf_buffer_duration:=120.0 \
-  -p minimum_laser_range:=0.25 \
-  -p max_laser_range:=4.0
+  -p minimum_laser_range:=0.20 \
+  -p max_laser_range:=25.0
 ```
 
 확인 명령:
@@ -789,6 +789,7 @@ ros2 run slam_toolbox async_slam_toolbox_node --ros-args \
 ```bash
 ros2 topic hz /scan
 ros2 run tf2_ros tf2_echo odom base_link
+ros2 run tf2_ros tf2_echo base_link laser
 ros2 topic echo /map --once --qos-durability transient_local
 ```
 
