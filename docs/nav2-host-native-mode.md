@@ -115,6 +115,7 @@ ros2 topic pub -1 /cmd_vel geometry_msgs/msg/Twist \
 sudo apt update
 sudo apt install -y \
   ros-humble-rplidar-ros \
+  ros-humble-laser-filters \
   ros-humble-slam-toolbox \
   ros-humble-navigation2 \
   ros-humble-nav2-bringup \
@@ -218,11 +219,50 @@ ros2 launch md_controller md_controller.launch.py use_rviz:=False
 ros2 run teleop_twist_keyboard teleop_twist_keyboard
 ```
 
-### 터미널 5: SLAM Toolbox
+### 터미널 5 (선택): 원격 조종용 카메라 스트림
+
+> `realsense2_camera`가 설치되어 있어야 합니다.
+
+```bash
+ros2 launch realsense2_camera rs_launch.py \
+  enable_color:=true \
+  enable_depth:=false \
+  enable_infra1:=false \
+  enable_infra2:=false \
+  enable_gyro:=false \
+  enable_accel:=false \
+  rgb_camera.color_profile:=1280x720x15
+```
+
+### 터미널 6 (선택): `/scan` -> `/scan_270` 각도 필터(270도)
+
+정면 기준 270도만 사용하려면 `-135° ~ +135°` 범위로 필터링합니다.  
+라디안 기준: `-2.35619 ~ +2.35619`
+
+```bash
+mkdir -p ~/ros2_ws/config
+cat > ~/ros2_ws/config/laser_filter_270.yaml <<'EOF'
+/**:
+  ros__parameters:
+    filter1:
+      name: angle_bounds_270
+      type: laser_filters/LaserScanAngularBoundsFilterInPlace
+      params:
+        lower_angle: -2.35619
+        upper_angle: 2.35619
+EOF
+
+ros2 run laser_filters scan_to_scan_filter_chain --ros-args \
+  --params-file /home/$USER/ros2_ws/config/laser_filter_270.yaml \
+  -r scan:=/scan \
+  -r scan_filtered:=/scan_270
+```
+
+### 터미널 7: SLAM Toolbox
 
 ```bash
 ros2 run slam_toolbox async_slam_toolbox_node --ros-args \
-  -r scan:=/scan \
+  -r scan:=/scan_270 \
   -p base_frame:=base_link \
   -p odom_frame:=odom \
   -p map_frame:=map \
@@ -234,6 +274,8 @@ ros2 run slam_toolbox async_slam_toolbox_node --ros-args \
   -p minimum_laser_range:=0.20 \
   -p max_laser_range:=25.0
 ```
+
+> 각도 필터를 쓰지 않으면 `-r scan:=/scan`으로 변경합니다.
 
 ### 맵 저장
 
@@ -305,7 +347,7 @@ cp /opt/ros/humble/share/nav2_bringup/params/nav2_params.yaml \
 
 `~/ros2_ws/config/nav2_params_host.yaml`에서 필요 시 아래 항목을 하드웨어에 맞춰 수정:
 
-- `amcl.ros__parameters.scan_topic: /scan`
+- `amcl.ros__parameters.scan_topic: /scan_270` (각도 필터 미사용 시 `/scan`)
 - `amcl.ros__parameters.base_frame_id: base_link`
 - `amcl.ros__parameters.odom_frame_id: odom`
 - `amcl.ros__parameters.global_frame: map`
@@ -352,7 +394,7 @@ ros2 launch foxglove_bridge foxglove_bridge_launch.xml port:=8765 address:=0.0.0
 Mac Foxglove 연결:
 
 - `ws://<jetson_ip>:8765`
-- 확인 토픽: `/scan`, `/map`, `/odom`, `/tf`, `/amcl_pose`
+- 확인 토픽: `/scan`, `/scan_270`, `/map`, `/odom`, `/tf`, `/amcl_pose`, `/camera/camera/color/image_raw`
 
 ### Foxglove에서 `/map` 실시간 확인 방법
 
@@ -362,11 +404,13 @@ Mac Foxglove 연결:
 4. 같은 `3D` 패널에서 `LaserScan`(`/scan`)과 `TF`(`/tf`)도 함께 켭니다.
 5. 로봇을 천천히 이동시켰을 때, `3D` 패널의 맵 경계가 넓어지고 점유 셀이 갱신되면 정상입니다.
 6. 데이터 갱신 여부를 확실히 보려면 `Raw Messages` 패널에서 `/map`을 열고 `header.stamp`가 계속 증가하는지 확인합니다.
+7. 카메라 화면 확인은 `Image` 패널을 추가하고 토픽을 `/camera/camera/color/image_raw`로 선택합니다.
 
 ## 필수 점검 명령
 
 ```bash
 ros2 topic hz /scan
+ros2 topic hz /scan_270
 ros2 run tf2_ros tf2_echo odom base_link
 ros2 run tf2_ros tf2_echo base_link laser
 ros2 run tf2_ros tf2_echo map odom
