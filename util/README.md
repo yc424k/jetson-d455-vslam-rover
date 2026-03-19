@@ -8,7 +8,6 @@
 - `setup_motor_udev.sh`
 - `setup_lidar_udev.sh`
 - `run_rplidar_s3_mapping.sh`
-- `apply_mdh300_ppr_params.sh`
 
 ## 1) `bootstrap_isaac_container.sh`
 
@@ -181,55 +180,10 @@ SERIAL_PORT=/dev/ttyLidar ./util/run_rplidar_s3_mapping.sh
 - `odom -> base_link` TF는 `md_controller`에서 먼저 발행되어야 합니다.
 - `base_link -> laser` TF가 없으면 `static_transform_publisher` 또는 URDF로 먼저 제공해야 합니다.
 
-## 5) `apply_mdh300_ppr_params.sh`
-
-목적:
-
-- `md_controller.launch.py`에 MDH300 모터 기준 초기 파라미터를 자동 반영
-- PPR 기준 초기값(`wheel_radius`, `wheel_base`, `GearRatio`, `poles`, `left_sign/right_sign`)을 한 번에 적용
-
-실행 위치:
-
-- **호스트** (`ml406@ubuntu:~`)
-
-사용 방법:
-
-```bash
-cd <repo_root>/util
-./apply_mdh300_ppr_params.sh
-```
-
-기본 대상 파일:
-
-- `~/ros2_ws/src/md_motor_driver_ros2/md_controller/launch/md_controller.launch.py`
-
-기본 반영값:
-
-- `wheel_radius: 0.10`
-- `wheel_base: 0.44`
-- `GearRatio: 4.33`
-- `RightGearRatio: 4.33`
-- `poles: 20`
-- `left_sign: 1`
-- `right_sign: 1`
-
-옵션 예시:
-
-```bash
-./apply_mdh300_ppr_params.sh --left-sign -1 --right-sign -1
-./apply_mdh300_ppr_params.sh --target /path/to/md_controller.launch.py
-```
-
-주의:
-
-- 실행 시 원본 파일 백업(`.bak.YYYYMMDD_HHMMSS`)을 자동 생성합니다.
-- 파라미터 키 이름이 다르면 해당 항목은 건너뛰고 로그로 표시합니다.
-
 ## 추천 운영 순서
 
 1. 호스트에서 `run_dev.sh`로 컨테이너 진입
 2. 컨테이너에서 `bootstrap_isaac_container.sh` 실행
 3. 호스트에서 필요 시 `setup_motor_udev.sh`로 포트 고정
 4. 호스트에서 `setup_lidar_udev.sh`로 라이다 포트(`/dev/ttyLidar`) 고정
-5. 호스트에서 `apply_mdh300_ppr_params.sh`로 모터 초기 파라미터 반영
-6. 맵 생성 시 `run_rplidar_s3_mapping.sh` 또는 문서의 수동 실행 절차 사용
+5. 맵 생성 시 `run_rplidar_s3_mapping.sh` 또는 문서의 수동 실행 절차 사용
