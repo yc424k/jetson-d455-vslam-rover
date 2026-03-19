@@ -354,6 +354,15 @@ Mac Foxglove 연결:
 - `ws://<jetson_ip>:8765`
 - 확인 토픽: `/scan`, `/map`, `/odom`, `/tf`, `/amcl_pose`
 
+### Foxglove에서 `/map` 실시간 확인 방법
+
+1. Jetson에서 `RPLIDAR`, `md_controller`, `slam_toolbox`, `foxglove_bridge`가 모두 실행 중인지 확인합니다.
+2. Mac Foxglove에서 `Open connection` -> `WebSocket` -> `ws://<jetson_ip>:8765`로 연결합니다.
+3. `3D` 패널을 추가하고 `OccupancyGrid` 토픽으로 `/map`을 선택합니다.
+4. 같은 `3D` 패널에서 `LaserScan`(`/scan`)과 `TF`(`/tf`)도 함께 켭니다.
+5. 로봇을 천천히 이동시켰을 때, `3D` 패널의 맵 경계가 넓어지고 점유 셀이 갱신되면 정상입니다.
+6. 데이터 갱신 여부를 확실히 보려면 `Raw Messages` 패널에서 `/map`을 열고 `header.stamp`가 계속 증가하는지 확인합니다.
+
 ## 필수 점검 명령
 
 ```bash
