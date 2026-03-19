@@ -6,6 +6,7 @@
 
 - `bootstrap_isaac_container.sh`
 - `setup_motor_udev.sh`
+- `setup_lidar_udev.sh`
 - `run_rplidar_s3_mapping.sh`
 
 ## 1) `bootstrap_isaac_container.sh`
@@ -104,7 +105,50 @@ ls -l /dev/ttyMotorLeft /dev/ttyMotorRight
 - 스크립트가 `sudo`를 사용해 udev rule을 설치합니다.
 - 어댑터를 바꾸면(하드웨어 교체) 규칙을 다시 생성하는 것이 안전합니다.
 
-## 3) `run_rplidar_s3_mapping.sh`
+## 3) `setup_lidar_udev.sh`
+
+목적:
+
+- 라이다 시리얼 장치를 `/dev/ttyLidar` 고정 심볼릭 링크로 매핑
+- 재부팅/재연결 후에도 라이다 포트명이 안정적으로 유지되게 설정
+
+실행 위치:
+
+- **호스트** (`ml406@ubuntu:~`)
+
+1) 후보 장치 확인:
+
+```bash
+cd ~/ros2_ws/src/md_motor_driver_ros2/util 2>/dev/null || cd /path/to/this/repo/util
+./setup_lidar_udev.sh --list
+```
+
+2) 규칙 생성/적용:
+
+```bash
+./setup_lidar_udev.sh --device /dev/ttyUSB0
+```
+
+3) 결과 확인:
+
+```bash
+ls -l /dev/ttyLidar
+```
+
+옵션 예시:
+
+```bash
+./setup_lidar_udev.sh \
+  --device /dev/ttyACM0 \
+  --link ttyLidar
+```
+
+주의:
+
+- 스크립트가 `sudo`를 사용해 udev rule을 설치합니다.
+- 라이다 어댑터를 바꾸면(하드웨어 교체) 규칙을 다시 생성하는 것이 안전합니다.
+
+## 4) `run_rplidar_s3_mapping.sh`
 
 목적:
 
@@ -119,12 +163,12 @@ ls -l /dev/ttyMotorLeft /dev/ttyMotorRight
 
 ```bash
 cd <repo_root>
-SERIAL_PORT=/dev/ttyUSB0 ./util/run_rplidar_s3_mapping.sh
+SERIAL_PORT=/dev/ttyLidar ./util/run_rplidar_s3_mapping.sh
 ```
 
 환경변수(선택):
 
-- `SERIAL_PORT` (기본: `/dev/ttyUSB0`)
+- `SERIAL_PORT` (기본: `/dev/ttyLidar`)
 - `SERIAL_BAUDRATE` (기본: `1000000`)
 - `FRAME_ID` (기본: `laser`)
 - `SCAN_MODE` (기본: `DenseBoost`)
@@ -141,4 +185,5 @@ SERIAL_PORT=/dev/ttyUSB0 ./util/run_rplidar_s3_mapping.sh
 1. 호스트에서 `run_dev.sh`로 컨테이너 진입
 2. 컨테이너에서 `bootstrap_isaac_container.sh` 실행
 3. 호스트에서 필요 시 `setup_motor_udev.sh`로 포트 고정
-4. 맵 생성 시 `run_rplidar_s3_mapping.sh` 또는 문서의 수동 실행 절차 사용
+4. 호스트에서 `setup_lidar_udev.sh`로 라이다 포트(`/dev/ttyLidar`) 고정
+5. 맵 생성 시 `run_rplidar_s3_mapping.sh` 또는 문서의 수동 실행 절차 사용

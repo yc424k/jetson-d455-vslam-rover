@@ -57,7 +57,7 @@ source /workspaces/isaac_ros-dev/install/setup.bash
 
 ros2 run rplidar_ros rplidar_node --ros-args \
   -p channel_type:=serial \
-  -p serial_port:=/dev/ttyUSB0 \
+  -p serial_port:=/dev/ttyLidar \
   -p serial_baudrate:=1000000 \
   -p frame_id:=laser \
   -p inverted:=false \
@@ -140,7 +140,7 @@ Mac Foxglove 연결:
 
 ```bash
 cd <repo_root>
-SERIAL_PORT=/dev/ttyUSB0 ./util/run_rplidar_s3_mapping.sh
+SERIAL_PORT=/dev/ttyLidar ./util/run_rplidar_s3_mapping.sh
 ```
 
 ## 맵 저장

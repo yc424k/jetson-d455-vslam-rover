@@ -7,7 +7,7 @@
 
 set -euo pipefail
 
-SERIAL_PORT="${SERIAL_PORT:-/dev/ttyUSB0}"
+SERIAL_PORT="${SERIAL_PORT:-/dev/ttyLidar}"
 SERIAL_BAUDRATE="${SERIAL_BAUDRATE:-1000000}"
 FRAME_ID="${FRAME_ID:-laser}"
 SCAN_MODE="${SCAN_MODE:-DenseBoost}"

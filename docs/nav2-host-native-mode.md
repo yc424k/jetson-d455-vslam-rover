@@ -61,7 +61,7 @@ source ~/ros2_ws/install/setup.bash
 ```bash
 ros2 run rplidar_ros rplidar_node --ros-args \
   -p channel_type:=serial \
-  -p serial_port:=/dev/ttyUSB0 \
+  -p serial_port:=/dev/ttyLidar \
   -p serial_baudrate:=1000000 \
   -p frame_id:=laser \
   -p scan_mode:=DenseBoost \
@@ -190,7 +190,7 @@ source ~/ros2_ws/install/setup.bash
 ```bash
 ros2 run rplidar_ros rplidar_node --ros-args \
   -p channel_type:=serial \
-  -p serial_port:=/dev/ttyUSB0 \
+  -p serial_port:=/dev/ttyLidar \
   -p serial_baudrate:=1000000 \
   -p frame_id:=laser \
   -p inverted:=false \
@@ -261,7 +261,7 @@ source ~/ros2_ws/install/setup.bash
 ```bash
 ros2 run rplidar_ros rplidar_node --ros-args \
   -p channel_type:=serial \
-  -p serial_port:=/dev/ttyUSB0 \
+  -p serial_port:=/dev/ttyLidar \
   -p serial_baudrate:=1000000 \
   -p frame_id:=laser \
   -p inverted:=false \

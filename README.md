@@ -753,7 +753,7 @@ ros2 launch md_controller md_controller.launch.py use_rviz:=False
 # 2) RPLIDAR S3M1 (Docker)
 ros2 run rplidar_ros rplidar_node --ros-args \
   -p channel_type:=serial \
-  -p serial_port:=/dev/ttyUSB0 \
+  -p serial_port:=/dev/ttyLidar \
   -p serial_baudrate:=1000000 \
   -p frame_id:=laser \
   -p inverted:=false \
